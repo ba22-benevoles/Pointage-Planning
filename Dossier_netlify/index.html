@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pointage — Banque Alimentaire de Lannion</title>
+<style>
+  :root {
+    --bg: #FAF6EF; --panel: #FFFFFF; --ink: #23261F; --ink-soft: #6B6A5E;
+    --green: #33513F; --green-soft: #E4EBE3; --amber: #C98A2C; --amber-soft: #F6E9D2;
+    --line: #E5DFCF; --danger: #B4462F; --danger-soft: #FBEAE4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Public Sans','Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+  .hidden { display: none !important; }
+
+  /* ===== MODE POINTAGE (kiosque) ===== */
+  #kioskView header {
+    padding: 28px 36px 20px; border-bottom: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 14px; }
+  .brand .mark { font-family: Georgia, serif; font-size: 30px; font-weight: 700; color: var(--green); }
+  .brand .sub { color: var(--ink-soft); font-size: 15px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .clock { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; color: var(--green); background: var(--green-soft); padding: 8px 18px; border-radius: 999px; }
+  .admin-entry { font-size: 12px; color: var(--ink-soft); background: none; border: none; cursor: pointer; text-decoration: underline; }
+
+  #kioskView main { padding: 24px 36px 60px; max-width: 1100px; margin: 0 auto; }
+  .search-row input { width: 100%; padding: 18px 22px; font-size: 20px; border: 2px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); outline: none; }
+  .search-row input:focus { border-color: var(--green); }
+  .hint { min-height: 20px; font-size: 14px; color: var(--danger); margin-top: 8px; padding-left: 4px; }
+  .kiosk-info { font-size: 14px; color: var(--ink-soft); margin-top: 4px; padding-left: 4px; }
+  .kiosk-info a { color: var(--green); font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-top: 16px; }
+  .kiosk-section-header {
+    grid-column: 1 / -1;
+    font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--ink-soft); padding-top: 10px; margin-top: 4px; border-top: 2px solid var(--line);
+  }
+  .kiosk-section-header:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; text-align: left; font-family: inherit; transition: transform 0.08s ease; min-height: 78px; display: flex; flex-direction: column; justify-content: space-between; }
+  .card:active { transform: scale(0.97); }
+  .card .name { font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .numero { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; width: fit-content; margin-top: 6px; }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .badge.none { background: #EFEDE4; color: var(--ink-soft); } .badge.none .dot { background: #B7B39F; }
+  .badge.present { background: var(--green-soft); color: var(--green); } .badge.present .dot { background: var(--green); }
+  .badge.done { background: #E3ECF3; color: #3E6B8F; } .badge.done .dot { background: #3E6B8F; }
+  .card.present-card { border-color: var(--green); background: var(--green-soft); }
+  .card.done-card { border-color: #3E6B8F; background: #E3ECF3; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(35,38,31,0.55); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--panel); border-radius: 20px; width: 100%; max-width: 420px; padding: 32px 30px 26px; text-align: center; }
+  .modal .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); }
+  .modal .action-word { font-family: Georgia, serif; font-size: 34px; font-weight: 700; margin: 8px 0 2px; }
+  .modal .action-word.arrivee { color: var(--amber); } .modal .action-word.depart { color: var(--green); }
+  .modal .person { font-size: 19px; margin: 10px 0 4px; }
+  .modal .time { font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 700; margin: 6px 0 22px; }
+  .modal .buttons { display: flex; gap: 10px; }
+  .modal button { flex: 1; padding: 16px; font-size: 17px; font-weight: 700; border-radius: 12px; border: none; cursor: pointer; font-family: inherit; }
+  .btn-confirm { background: var(--green); color: white; }
+  .btn-cancel { background: #EFEDE4; color: var(--ink); }
+  .warning { background: var(--danger-soft); color: var(--danger); font-size: 14px; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; text-align: left; }
+
+  .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green); color: white; padding: 14px 24px; border-radius: 12px; font-weight: 600; opacity: 0; transition: 0.25s ease; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== Overlay connexion admin ===== */
+  #loginOverlay { position: fixed; inset: 0; background: rgba(35,38,31,0.55); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 20; }
+  #loginOverlay.open { display: flex; }
+  .login-box { background: var(--panel); border-radius: 18px; padding: 40px 36px; width: 100%; max-width: 360px; text-align: center; }
+  .login-box .mark { font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: var(--green); }
+  .login-box .sub { color: var(--ink-soft); font-size: 14px; margin: 6px 0 22px; }
+  .login-box input { width: 100%; padding: 14px 16px; font-size: 16px; border: 2px solid var(--line); border-radius: 10px; margin-bottom: 12px; outline: none; }
+  .login-box input:focus { border-color: var(--green); }
+  .login-box .btn-row { display: flex; gap: 10px; }
+  .login-box button { flex: 1; padding: 13px; font-size: 15px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; }
+  .login-box .btn-confirm-login { background: var(--green); color: white; }
+  .login-box .btn-cancel-login { background: #EFEDE4; color: var(--ink); }
+  .login-error { color: var(--danger); font-size: 13px; min-height: 18px; margin: 4px 0 8px; }
+
+  #absenceOverlay { position: fixed; inset: 0; background: rgba(35,38,31,0.55); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 20; }
+  #absenceOverlay.open { display: flex; }
+
+  /* ===== MODE ADMIN ===== */
+  #adminView { display: none; }
+  #adminView.active { display: block; }
+  #adminView header { padding: 20px 32px; border-bottom: 2px solid var(--line); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; background: var(--green-soft); }
+  .admin-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: var(--green); color: white; padding: 4px 10px; border-radius: 999px; margin-right: 10px; }
+  .btn-finish { padding: 10px 18px; background: var(--green); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; }
+
+  nav.tabs { display: flex; gap: 6px; padding: 16px 32px 0; border-bottom: 2px solid var(--line); }
+  nav.tabs button { padding: 10px 18px; border: none; background: none; font-size: 15px; font-weight: 600; color: var(--ink-soft); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+  nav.tabs button.active { color: var(--green); border-bottom-color: var(--green); }
+
+  #adminView main { padding: 26px 32px 60px; max-width: 1050px; margin: 0 auto; }
+  .view { display: none; } .view.active { display: block; }
+  .toolbar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .toolbar input[type=text] { flex: 1; min-width: 220px; padding: 12px 16px; font-size: 15px; border: 2px solid var(--line); border-radius: 10px; outline: none; }
+  .toolbar input:focus { border-color: var(--green); }
+  .btn-primary { padding: 12px 20px; background: var(--green); color: white; border: none; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 14px; overflow: hidden; border: 2px solid var(--line); }
+  th, td { text-align: left; padding: 12px 14px; font-size: 14px; border-bottom: 1px solid var(--line); }
+  th { background: var(--green-soft); color: var(--green); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { background: #DCE6DA; }
+  .sort-arrow { display: inline-block; margin-left: 4px; font-size: 10px; opacity: 0.5; }
+  .sort-arrow.active { opacity: 1; }
+  tr:last-child td { border-bottom: none; }
+  tr.row:hover { background: #FBFAF6; cursor: pointer; }
+  .tag { display: inline-block; background: var(--amber-soft); color: #8A5C16; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; margin: 1px 2px 1px 0; }
+  .tag.inactive { background: #EFEDE4; color: var(--ink-soft); }
+
+  #overlay { z-index: 15; align-items: center; overflow-y: auto; padding: 30px 20px; }
+  #overlay .modal { max-width: 760px; text-align: left; padding: 0; max-height: 88vh; display: flex; flex-direction: row; overflow: hidden; }
+  #overlay .modal-sidebar {
+    flex-shrink: 0; width: 54px; background: var(--green); display: flex;
+    align-items: center; justify-content: center; padding: 20px 0;
+  }
+  #overlay .modal-sidebar h2 {
+    margin: 0; writing-mode: vertical-rl; transform: rotate(180deg);
+    font-family: Georgia, serif; font-size: 19px; font-weight: 700; color: white; letter-spacing: 0.02em;
+  }
+  #overlay .modal-main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  #overlay .modal-scroll { overflow-y: auto; padding: 22px 32px 4px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; }
+  .field input, .field select { width: 100%; padding: 10px 12px; font-size: 15px; border: 2px solid var(--line); border-radius: 8px; outline: none; }
+  .field input:focus { border-color: var(--green); }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .check-pill { display: flex; align-items: center; gap: 6px; border: 2px solid var(--line); border-radius: 999px; padding: 7px 12px; font-size: 13px; cursor: pointer; user-select: none; }
+  .check-pill input { margin: 0; }
+  .check-pill.checked { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+  #checksJours { flex-wrap: nowrap; }
+  #checksJours .check-pill { flex: 1; justify-content: center; padding: 8px 4px; }
+  .modal-actions { display: flex; justify-content: space-between; align-items: center; padding: 16px 32px 22px; border-top: 1px solid var(--line); background: var(--panel); flex-shrink: 0; }
+  .btn-delete { background: none; border: none; color: var(--danger); font-size: 13px; cursor: pointer; text-decoration: underline; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-cancel { padding: 11px 18px; background: #EFEDE4; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .btn-save { padding: 11px 20px; background: var(--green); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+  .conge-form { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 24px; }
+  .conge-form .field-row { align-items: flex-end; }
+  .conge-list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--panel); border: 2px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
+  .conge-list-item .who { font-weight: 700; }
+  .conge-list-item .period { color: var(--ink-soft); font-size: 13px; }
+  .btn-remove { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; }
+
+  .poste-card { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 16px 20px; margin-bottom: 10px; }
+  .poste-card.ok { border-color: var(--green); }
+  .poste-card.warn { border-color: var(--danger); }
+  .poste-card .poste-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .poste-card .poste-nom { font-weight: 700; font-size: 16px; }
+  .poste-card .poste-count { font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+  .poste-card.ok .poste-count { background: var(--green-soft); color: var(--green); }
+  .poste-card.warn .poste-count { background: var(--danger-soft); color: var(--danger); }
+  .poste-card .noms { font-size: 14px; color: var(--ink-soft); }
+  .poste-card .noms span { color: var(--ink); }
+  .nonaffectes-box { background: var(--amber-soft); border-radius: 14px; padding: 16px 20px; margin-top: 18px; }
+  .nonaffectes-box h3 { margin: 0 0 8px; font-size: 14px; color: #8A5C16; }
+  .nonaffectes-box .item { font-size: 14px; margin-bottom: 4px; }
+  .nonaffectes-box .item .raison { color: var(--ink-soft); font-size: 12px; }
+
+  .bilan-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 4px; }
+  .bilan-card { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .bilan-card .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 700; margin-bottom: 6px; }
+  .bilan-card .valeur { font-size: 22px; font-weight: 700; color: var(--green); }
+  .bilan-card .sous { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .bilan-total { background: var(--green); color: white; border-radius: 14px; padding: 20px 24px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .bilan-total .label { font-family: Georgia, serif; font-size: 17px; }
+  .bilan-total .valeur { font-size: 28px; font-weight: 700; }
+  .jour-header { font-family: Georgia, serif; font-size: 20px; color: var(--green); margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--line); }
+  .jour-header:first-child { margin-top: 0; }
+
+  .poste-table-wrap { margin-bottom: 30px; }
+  .poste-table-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; color: var(--green); }
+  .poste-table-sub { font-weight: 400; font-size: 13px; color: var(--ink-soft); }
+  .planning-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .planning-table th, .planning-table td { border: 1px solid var(--line); padding: 9px 10px; font-size: 13px; text-align: center; }
+  .planning-table th { background: var(--green-soft); color: var(--green); font-weight: 700; line-height: 1.4; }
+  .planning-table td.row-num { background: #F5F2E9; font-weight: 700; color: var(--ink-soft); width: 36px; }
+  .planning-table td.cell-manque { background: var(--danger-soft); }
+  .planning-table td.cell-editable { cursor: pointer; }
+  .planning-table td.cell-editable:hover { background: var(--green-soft); }
+  .planning-statut-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+  .planning-statut-badge.enregistre { background: var(--green-soft); color: var(--green); }
+  .planning-statut-badge.proposition { background: var(--amber-soft); color: #8A5C16; }
+  .cell-edit-select { width: 100%; padding: 4px; font-size: 13px; border: 2px solid var(--green); border-radius: 6px; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #planningResult, #planningResult * { visibility: visible; }
+    #planningResult { position: absolute; top: 0; left: 0; width: 100%; }
+    .jour-header { page-break-before: auto; }
+    .poste-table-wrap { page-break-inside: avoid; }
+    .nonaffectes-box { display: none; }
+    .cell-manque { background: none !important; -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Verrou d'entrée du site (mot de passe vérifié côté serveur, mémorisé sur cet appareil) -->
+<div id="siteGate" style="position:fixed;inset:0;z-index:100;background:#FAF6EF;display:flex;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#FFFFFF;border:2px solid #E5DFCF;border-radius:18px;padding:40px 36px;width:100%;max-width:360px;text-align:center;">
+    <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#33513F;margin-bottom:6px;">Pointage BA Lannion</div>
+    <div style="color:#6B6A5E;font-size:14px;margin-bottom:22px;">Accès réservé — mot de passe requis</div>
+    <input type="password" id="siteGatePwd" placeholder="Mot de passe" style="width:100%;padding:14px 16px;font-size:16px;border:2px solid #E5DFCF;border-radius:10px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+    <div id="siteGateError" style="color:#B4462F;font-size:13px;min-height:18px;margin-bottom:8px;"></div>
+    <button id="siteGateBtn" style="width:100%;padding:14px;font-size:15px;font-weight:700;border:none;border-radius:10px;background:#33513F;color:white;cursor:pointer;">Entrer</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Client Supabase UNIQUE pour toute la page (verrou d'entrée + reste de l'appli).
+  // En créer plusieurs sur le même stockage provoque des avertissements
+  // "Multiple GoTrueClient instances" et des comportements de session imprévisibles.
+  const SUPABASE_URL = 'https://pljyvybrcjrhmguewrzy.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_lkpGFUjhjG2nHBGbi7uB1w_9FanU5Q_';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  (function() {
+    const gate = document.getElementById('siteGate');
+    if (localStorage.getItem('site_unlocked') === 'yes') {
+      gate.style.display = 'none';
+      return;
+    }
+    const pwdInput = document.getElementById('siteGatePwd');
+    const errZone = document.getElementById('siteGateError');
+    const btn = document.getElementById('siteGateBtn');
+
+    async function tryUnlock() {
+      btn.disabled = true;
+      errZone.textContent = '';
+      const { data: ok, error } = await sb.rpc('verifier_mdp_site', { p_mdp: pwdInput.value });
+      btn.disabled = false;
+      if (error) { errZone.textContent = 'Erreur de vérification, réessaie.'; return; }
+      if (ok) {
+        localStorage.setItem('site_unlocked', 'yes');
+        gate.style.display = 'none';
+      } else {
+        errZone.textContent = 'Mot de passe incorrect.';
+        pwdInput.value = '';
+        pwdInput.focus();
+      }
+    }
+    btn.onclick = tryUnlock;
+    pwdInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
+    pwdInput.focus();
+  })();
+</script>
+
+<!-- ============ MODE POINTAGE (par défaut) ============ -->
+<div id="kioskView">
+  <header>
+    <div class="brand">
+      <span class="mark">Pointage</span>
+      <span class="sub">Banque Alimentaire — Lannion</span>
+    </div>
+    <div class="header-right">
+      <div class="clock" id="clock">--:--</div>
+      <a href="absence.html" class="admin-entry" style="text-decoration:none;">Signaler une absence à venir</a>
+      <button class="admin-entry" id="btnOpenAdmin">Espace admin</button>
+      <button class="admin-entry" id="btnQuitterSite" title="Reverrouille l'accès sur cet appareil">Quitter</button>
+    </div>
+  </header>
+  <main>
+    <div id="kioskFerme" class="hidden" style="text-align:center; padding: 60px 20px;">
+      <div style="font-family:Georgia,serif; font-size:26px; font-weight:700; color:var(--green); margin-bottom:10px;">Banque Alimentaire fermée</div>
+      <div id="kioskFermeTexte" style="color:var(--ink-soft); font-size:16px;"></div>
+    </div>
+    <div id="kioskContenu">
+      <div class="search-row">
+        <input type="text" id="search" placeholder="Nom, ou numéro à 3 chiffres…" autofocus>
+        <div class="hint" id="searchHint"></div>
+        <div class="kiosk-info" id="kioskInfo"></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </main>
+  <footer style="text-align:center; padding:16px; font-size:12px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor</footer>
+</div>
+
+<!-- ============ MODE ADMIN ============ -->
+<div id="adminView">
+  <header>
+    <div class="brand">
+      <span class="admin-badge">Mode admin</span>
+      <span class="sub">Bénévoles &amp; planning — Lannion</span>
+    </div>
+    <button class="btn-finish" id="btnFinishAdmin">Terminer et repasser en pointage</button>
+  </header>
+  <nav class="tabs">
+    <button class="tab-btn active" data-view="benevoles">Bénévoles</button>
+    <button class="tab-btn" data-view="conges">Congés / Absences</button>
+    <button class="tab-btn" data-view="planning">Planning</button>
+    <button class="tab-btn" data-view="parametres">Paramètres</button>
+    <button class="tab-btn" data-view="bilans">Bilans</button>
+  </nav>
+  <main>
+    <div class="view active" id="view-benevoles">
+      <div class="toolbar">
+        <input type="text" id="searchB" placeholder="Rechercher un nom ou un numéro…">
+        <button class="btn-primary" id="btnAdd">+ Ajouter un bénévole</button>
+      </div>
+      <table>
+        <thead><tr>
+          <th>N°</th>
+          <th class="sortable" data-sort="nom">Nom<span class="sort-arrow" id="arrow-nom"></span></th>
+          <th class="sortable" data-sort="categorie">Catégorie<span class="sort-arrow" id="arrow-categorie"></span></th>
+          <th>Jours habituels</th>
+          <th class="sortable" data-sort="postes">Postes qualifiés<span class="sort-arrow" id="arrow-postes"></span></th>
+          <th>Présences</th>
+          <th class="sortable" data-sort="statut">Statut<span class="sort-arrow" id="arrow-statut"></span></th>
+        </tr></thead>
+        <tbody id="tbodyB"></tbody>
+      </table>
+    </div>
+    <div class="view" id="view-conges">
+      <div class="conge-form">
+        <div class="field-row">
+          <div class="field"><label>Bénévole</label><select id="congeBenevole"></select></div>
+          <div class="field"><label>Du</label><input type="date" id="congeDebut"></div>
+          <div class="field"><label>Au</label><input type="date" id="congeFin"></div>
+          <div class="field" style="flex: 0 0 auto;"><button class="btn-save" id="btnAddConge">Ajouter</button></div>
+        </div>
+      </div>
+      <div id="congeList"></div>
+
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid var(--line);">
+        <div style="font-weight:700; color:var(--ink); margin-bottom:14px;">Fermetures de la BA (tout le monde, aucun pointage possible)</div>
+        <div class="conge-form">
+          <div class="field-row" style="align-items: flex-end;">
+            <div class="field"><label>Du</label><input type="date" id="fermetureDebut"></div>
+            <div class="field"><label>Au</label><input type="date" id="fermetureFin"></div>
+            <div class="field"><label>Motif</label><input type="text" id="fermetureMotif" placeholder="Ex. Fermeture de Noël"></div>
+            <div class="field" style="flex: 0 0 auto;"><button class="btn-save" id="btnAddFermeture">Ajouter</button></div>
+            <div class="field" style="flex: 0 0 auto;"><button class="btn-cancel hidden" id="btnAnnulerFermeture">Annuler</button></div>
+          </div>
+        </div>
+        <div id="fermetureList"></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-planning">
+      <div class="conge-form">
+        <div class="field-row" style="align-items: flex-end;">
+          <div class="field">
+            <label>Lundi de la semaine à planifier</label>
+            <input type="date" id="planningDate">
+          </div>
+          <div class="field" style="flex: 0 0 auto;">
+            <button class="btn-cancel" id="btnSemaineSuivante" type="button">Semaine prochaine</button>
+          </div>
+          <div class="field" style="flex: 0 0 auto;">
+            <button class="btn-save" id="btnGenererPlanning">Afficher cette semaine</button>
+          </div>
+        </div>
+      </div>
+      <div id="planningLigneHaut" style="display:flex; align-items:center; gap: 20px; margin-bottom: 16px; flex-wrap: wrap;">
+        <div id="planningStatut"></div>
+        <div class="field hidden" id="planningFiltreZone" style="max-width: 240px; margin: 0;">
+          <label>Afficher</label>
+          <select id="planningFiltrePoste">
+            <option value="">Tous les postes</option>
+          </select>
+        </div>
+      </div>
+      <div id="planningResult"></div>
+      <div style="display:flex; gap:10px; margin-top: 20px; align-items:center; flex-wrap:wrap;">
+        <button class="btn-cancel hidden" id="btnRegenererPlanning">Régénérer une proposition</button>
+        <button class="btn-save hidden" id="btnEnregistrerPlanning">Enregistrer ce planning</button>
+        <button class="btn-primary hidden" id="btnImprimer">Imprimer ce planning</button>
+        <input type="email" id="planningEmailTest" placeholder="Email de test (vide = tous les bénévoles)" class="hidden" style="padding:10px 12px; font-size:14px; border:2px solid var(--line); border-radius:8px; min-width:260px;">
+        <button class="btn-primary hidden" id="btnEnvoyerPlanning" style="background:#3E6B8F;">✉️ Envoyer</button>
+      </div>
+    </div>
+
+    <div class="view" id="view-parametres">
+      <div class="conge-form">
+        <div style="font-weight:700; color:var(--ink); margin-bottom:14px;">Taux de valorisation et indemnité kilométrique</div>
+        <div class="field-row">
+          <div class="field" style="flex: 0 0 110px;"><label>Année</label><input type="number" id="paramAnnee" min="2020" max="2100"></div>
+          <div class="field"><label>Direction (€/h)</label><input type="text" id="paramDirection"></div>
+          <div class="field"><label>Cadre (€/h)</label><input type="text" id="paramCadre"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Agent (€/h)</label><input type="text" id="paramAgent"></div>
+          <div class="field"><label>Autre (€/h)</label><input type="text" id="paramAutre"></div>
+          <div class="field"><label>Indemnité kilométrique (€/km)</label><input type="text" id="paramIK"></div>
+        </div>
+        <button class="btn-save" id="btnSaveParametres">Enregistrer cette année</button>
+      </div>
+
+      <table style="margin-top: 10px;">
+        <thead><tr><th>Année</th><th>Direction</th><th>Cadre</th><th>Agent</th><th>Autre</th><th>IK (€/km)</th></tr></thead>
+        <tbody id="tbodyParametres"></tbody>
+      </table>
+    </div>
+
+    <div class="view" id="view-bilans">
+      <div class="conge-form">
+        <div class="field-row" style="align-items: flex-end;">
+          <div class="field" style="flex: 0 0 130px;"><label>Année</label><input type="number" id="bilanAnnee" min="2020" max="2100"></div>
+          <div class="field" style="flex: 0 0 auto;"><button class="btn-save" id="btnCalculerBilan">Calculer</button></div>
+        </div>
+      </div>
+
+      <div id="bilanResume"></div>
+
+      <div class="toolbar" style="margin-top: 24px;">
+        <input type="text" id="searchBilan" placeholder="Rechercher un bénévole…">
+      </div>
+      <table>
+        <thead><tr><th>N°</th><th>Nom</th><th>Jours présence</th><th>Heures</th><th>Jours congé</th><th>Distance (km)</th><th>Indemnité km</th></tr></thead>
+        <tbody id="tbodyBilanBenevoles"></tbody>
+      </table>
+    </div>
+  </main>
+  <footer style="text-align:center; padding:16px; font-size:12px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor</footer>
+</div>
+
+<!-- Modal fiche bénévole (mode admin) -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-sidebar"><h2 id="modalTitle">Fiche bénévole</h2></div>
+    <div class="modal-main">
+    <div class="modal-scroll">
+    <div id="modalNbPresences" style="font-size:13px;color:var(--ink-soft);margin:0 0 14px;"></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Numéro (3 chiffres)</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="fNumero" maxlength="3" style="flex:1;">
+          <button type="button" id="btnRegenererNumero" class="btn-cancel" style="flex-shrink:0; padding:0 14px; font-size:13px;">🎲 Régénérer</button>
+        </div>
+      </div>
+      <div class="field"><label>Statut</label>
+        <select id="fActif">
+          <option value="actif">Actif</option>
+          <option value="longue_absence">Longue absence</option>
+          <option value="conges">Congés</option>
+          <option value="inactif">Inactif</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Date de départ (si inactif)</label>
+        <input type="date" id="fDateDepart">
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Les données identifiantes sont anonymisées automatiquement au 1er mars suivant (le temps de préparer le CERFA). Les heures/présences restent conservées pour les bilans passés.</div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Prénom</label><input type="text" id="fPrenom"></div>
+      <div class="field"><label>Nom</label><input type="text" id="fNom"></div>
+    </div>
+    <div class="field"><label>Rue</label><input type="text" id="fRue"></div>
+    <div class="field-row">
+      <div class="field" style="flex: 0 0 130px;"><label>Code postal</label><input type="text" id="fCodePostal"></div>
+      <div class="field"><label>Ville</label><input type="text" id="fVille"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Distance domicile ↔ BA (km, aller-retour)</label><input type="text" id="fDistance"></div>
+      <div class="field"><label>Téléphone</label><input type="text" id="fTelephone"></div>
+    </div>
+    <div class="field">
+      <label>Email (sert à la connexion pour « Mes congés »)</label>
+      <input type="email" id="fEmail">
+    </div>
+    <div class="field">
+      <label>Catégorie</label>
+      <select id="fCategorie">
+        <option value="benevole">Bénévole</option>
+        <option value="salarie">Salarié</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Type d'activité (valorisation du bénévolat — sans effet pour un salarié)</label>
+      <select id="fTypeActivite">
+        <option value="">— Non renseigné —</option>
+        <option value="direction">Direction</option>
+        <option value="cadre">Cadre</option>
+        <option value="agent">Agent</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+    <div class="field"><label>Postes qualifiés</label><div class="checks" id="checksPostes"></div></div>
+    <div class="field"><label>Jours de présence habituels</label><div class="checks" id="checksJours"></div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-delete" id="btnDelete">Supprimer ce bénévole</button>
+      <div class="btn-row">
+        <button class="btn-cancel" id="btnCancelModal">Annuler</button>
+        <button class="btn-save" id="btnSaveModal">Enregistrer</button>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pointage (mode kiosque) -->
+<div class="overlay" id="pointageOverlay">
+  <div class="modal">
+    <div id="warningZone"></div>
+    <div class="eyebrow" id="modalEyebrow">Enregistrer</div>
+    <div class="action-word" id="modalAction">ARRIVÉE</div>
+    <div class="person" id="modalPerson">—</div>
+    <div class="time" id="modalTime">--:--</div>
+    <div class="buttons">
+      <button class="btn-cancel" id="btnCancel">Annuler</button>
+      <button class="btn-confirm" id="btnConfirm">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay connexion admin -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="mark">Espace admin</div>
+    <div class="sub">Connexion requise pour continuer</div>
+    <input type="email" id="adminEmail" placeholder="Adresse email">
+    <input type="password" id="pwd" placeholder="Mot de passe">
+    <div class="login-error" id="loginError"></div>
+    <div class="btn-row">
+      <button class="btn-cancel-login" id="btnCancelLogin">Annuler</button>
+      <button class="btn-confirm-login" id="btnConfirmLogin">Se connecter</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // (client Supabase déjà créé en haut de page, réutilisé ici : voir "sb")
+
+  const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam']; // jour_semaine 1..6
+  const JOUR_JS_TO_LABEL = { 1:'Lun', 2:'Mar', 3:'Mer', 4:'Jeu', 5:'Ven', 6:'Sam' }; // 0=dim, fermé
+  const JOURS_SEMAINE = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+  const JOUR_NOM_COMPLET = { Lun: 'Lundi', Mar: 'Mardi', Mer: 'Mercredi', Jeu: 'Jeudi', Ven: 'Vendredi' };
+
+  // ====================================================
+  // ÉTAT LOCAL (rempli depuis Supabase)
+  // ====================================================
+  let benevoles = [];      // { id, numero, nom, prenom, statut, ..., postes:[...noms], jours:[...labels], pointageStatus, since }
+  let conges = [];         // { id, benevole_id, debut, fin, type, origine }
+  let POSTES = [];         // [ nom, nom, ... ] pour les checkboxes
+  let POSTES_CONFIG = [];  // [ { id, nom, min, max } ]
+
+  function todayISO() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function nowHHMMSS() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ':' + String(d.getSeconds()).padStart(2,'0');
+  }
+  function nowStr() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  function nowDateTimeStr() {
+    const d = new Date();
+    const date = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    return date + ' — ' + nowStr();
+  }
+  function formatDate(iso) { const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; }
+
+  // ====================================================
+  // CHARGEMENT DES DONNÉES
+  // ====================================================
+  async function chargerPostes() {
+    const { data, error } = await sb.from('postes').select('*').order('id');
+    if (error) { console.error(error); return; }
+    POSTES = data.map(p => p.nom);
+    POSTES_CONFIG = data.map(p => ({ id: p.id, nom: p.nom, min: p.effectif_min, max: p.effectif_max }));
+
+    const filtre = document.getElementById('planningFiltrePoste');
+    filtre.innerHTML = '<option value="">Tous les postes</option>' +
+      POSTES_CONFIG.map(p => `<option value="${p.nom}">${p.nom}</option>`).join('');
+  }
+
+  async function chargerBenevoles() {
+    const { data, error } = await sb.from('benevoles').select(`
+      id, numero, nom, prenom, statut, categorie, distance_km, rue, code_postal, ville, telephone, email, date_depart, nb_presences, type_activite,
+      benevole_postes ( postes ( nom ) ),
+      disponibilites ( jour_semaine )
+    `);
+    if (error) { console.error(error); return; }
+
+    const todayPointages = await chargerPointagesDuJour();
+
+    benevoles = data.map(b => {
+      const pt = todayPointages[b.id];
+      return {
+        ...b,
+        postes: (b.benevole_postes || []).map(bp => bp.postes.nom),
+        jours: (b.disponibilites || []).map(d => JOURS[d.jour_semaine - 1]),
+        pointageStatus: pt ? pt.status : 'none',
+        since: pt ? pt.since : null,
+        depuisAutreJour: pt ? (pt.depuisAutreJour || false) : false,
+        dateSession: pt ? pt.dateSession : null
+      };
+    });
+  }
+
+  async function chargerPointagesDuJour() {
+    // 1. Sessions actuellement OUVERTES, quel que soit le jour où elles ont démarré.
+    //    Indispensable : sans ça, une session oubliée hier passe inaperçue et un
+    //    nouveau pointage "arrivée" aujourd'hui entre en conflit avec elle en base.
+    const { data: ouvertes, error: err1 } = await sb.from('pointages')
+      .select('*')
+      .is('heure_depart', null)
+      .eq('type', 'presence');
+    if (err1) { console.error(err1); return {}; }
+
+    // 2. Sessions terminées AUJOURD'HUI (pour le statut "Terminé aujourd'hui")
+    const { data: racheves, error: err2 } = await sb.from('pointages')
+      .select('*')
+      .eq('date', todayISO())
+      .eq('type', 'presence')
+      .not('heure_depart', 'is', null);
+    if (err2) { console.error(err2); return {}; }
+
+    const map = {};
+    ouvertes.forEach(row => {
+      const depuisAutreJour = row.date !== todayISO();
+      map[row.benevole_id] = {
+        status: 'present',
+        since: row.heure_arrivee ? row.heure_arrivee.slice(0, 5) : null,
+        depuisAutreJour,
+        dateSession: row.date
+      };
+    });
+    racheves.forEach(row => {
+      if (!map[row.benevole_id]) map[row.benevole_id] = { status: 'done', since: null };
+    });
+    return map;
+  }
+
+  async function chargerConges() {
+    const { data, error } = await sb.from('conges')
+      .select('*, benevoles ( nom, prenom )')
+      .order('debut', { ascending: false });
+    if (error) { console.error(error); return; }
+    conges = data;
+  }
+
+  async function chargerTout() {
+    await chargerPostes();
+    await chargerBenevoles();
+    await chargerConges();
+    await chargerFermetures();
+  }
+
+  // ====================================================
+  // BASCULE KIOSQUE <-> ADMIN
+  // ====================================================
+  document.getElementById('btnQuitterSite').onclick = () => {
+    if (!confirm('Reverrouiller l\'accès à cet appareil ? Il faudra ressaisir le mot de passe pour revenir sur le site.')) return;
+    localStorage.removeItem('site_unlocked');
+    location.reload();
+  };
+
+  document.getElementById('btnOpenAdmin').onclick = () => {
+    document.getElementById('adminEmail').value = '';
+    document.getElementById('pwd').value = '';
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('loginOverlay').classList.add('open');
+  };
+  document.getElementById('btnCancelLogin').onclick = () => {
+    document.getElementById('loginOverlay').classList.remove('open');
+  };
+  document.getElementById('btnConfirmLogin').onclick = async () => {
+    const email = document.getElementById('adminEmail').value.trim();
+    const password = document.getElementById('pwd').value;
+    const errZone = document.getElementById('loginError');
+    errZone.textContent = '';
+
+    if (!email || !password) { errZone.textContent = 'Email et mot de passe requis.'; return; }
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { errZone.textContent = 'Identifiants incorrects.'; return; }
+
+    const { data: adminRow } = await sb.from('admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
+    if (!adminRow) {
+      await sb.auth.signOut();
+      errZone.textContent = 'Ce compte n\'a pas les droits admin.';
+      return;
+    }
+
+    document.getElementById('loginOverlay').classList.remove('open');
+    document.getElementById('kioskView').classList.add('hidden');
+    document.getElementById('adminView').classList.add('active');
+    await chargerTout();
+    renderBenevoles(); renderCongeSelect(); renderConges();
+    document.getElementById('paramAnnee').value = new Date().getFullYear();
+    document.getElementById('bilanAnnee').value = new Date().getFullYear();
+    await chargerParametres();
+    await chargerFermetures();
+    renderFermetures();
+  };
+  document.getElementById('btnFinishAdmin').onclick = async () => {
+    await sb.auth.signOut();
+    document.getElementById('adminView').classList.remove('active');
+    document.getElementById('kioskView').classList.remove('hidden');
+    await chargerTout();
+    renderKiosk();
+  };
+
+  // ====================================================
+  // MODE POINTAGE (kiosque)
+  // ====================================================
+  const grid = document.getElementById('grid');
+  const search = document.getElementById('search');
+  let pending = null;
+  let voirTous = false;
+
+  function todayLabel() { return JOUR_JS_TO_LABEL[new Date().getDay()]; }
+  function estAttenduAujourdhui(p) {
+    const jl = todayLabel();
+    if (!jl) return true;
+    if (!p.jours.includes(jl)) return false;
+    const dt = todayISO();
+    if (conges.some(c => c.benevole_id === p.id && dt >= c.debut && dt <= c.fin)) return false;
+    return true;
+  }
+
+  function badge(p) {
+    if (p.pointageStatus === 'present') {
+      if (p.depuisAutreJour) return `<span class="badge" style="background:var(--danger-soft);color:var(--danger);"><span class="dot" style="background:var(--danger);"></span>Session ouverte depuis le ${formatDate(p.dateSession)} !</span>`;
+      return `<span class="badge present"><span class="dot"></span>Présent depuis ${p.since}</span>`;
+    }
+    if (p.pointageStatus === 'done') return `<span class="badge done"><span class="dot"></span>Terminé aujourd'hui</span>`;
+    return `<span class="badge none"><span class="dot"></span>Non pointé</span>`;
+  }
+
+  function renderKiosk() {
+    const fermetureActive = fermetureEffective(todayISO());
+    document.getElementById('kioskFerme').classList.toggle('hidden', !fermetureActive);
+    document.getElementById('kioskContenu').classList.toggle('hidden', !!fermetureActive);
+    if (fermetureActive) {
+      document.getElementById('kioskFermeTexte').textContent =
+        `${fermetureActive.motif || 'Fermeture'} — du ${formatDate(fermetureActive.debut)} au ${formatDate(fermetureActive.fin)}`;
+      return;
+    }
+
+    const raw = search.value.trim();
+    const hint = document.getElementById('searchHint');
+    hint.textContent = '';
+    const isNumeric = /^\d+$/.test(raw);
+
+    if (isNumeric && raw.length === 3) {
+      const match = benevoles.find(p => p.numero === parseInt(raw, 10));
+      if (match) { openPointageModal(match); search.value = ''; renderKiosk(); return; }
+      else hint.textContent = `Aucun bénévole avec le numéro ${raw}.`;
+    }
+
+    const actifs = benevoles.filter(p => p.statut === 'actif');
+    const attendus = actifs.filter(estAttenduAujourdhui);
+    const enRechercheOuVoirTous = raw.length > 0 || voirTous;
+    const pool = enRechercheOuVoirTous ? actifs : attendus;
+
+    const infoZone = document.getElementById('kioskInfo');
+    if (!enRechercheOuVoirTous) {
+      infoZone.innerHTML = `${attendus.length} bénévole${attendus.length > 1 ? 's' : ''} attendu${attendus.length > 1 ? 's' : ''} aujourd'hui · <a href="#" id="lienVoirTous">afficher tous les bénévoles</a>`;
+      document.getElementById('lienVoirTous').onclick = (e) => { e.preventDefault(); voirTous = true; renderKiosk(); };
+    } else if (voirTous && raw.length === 0) {
+      infoZone.innerHTML = `Tous les bénévoles actifs · <a href="#" id="lienRevenir">revenir aux présents attendus aujourd'hui</a>`;
+      document.getElementById('lienRevenir').onclick = (e) => { e.preventDefault(); voirTous = false; renderKiosk(); };
+    } else {
+      infoZone.innerHTML = '';
+    }
+
+    const q = raw.toLowerCase();
+    grid.innerHTML = '';
+    const filtres = pool.filter(p => isNumeric ? p.numero.toString().startsWith(q) : (p.prenom + ' ' + p.nom).toLowerCase().includes(q));
+    const parNomPrenom = (a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom);
+    const salaries = filtres.filter(p => p.categorie === 'salarie').sort(parNomPrenom);
+    const benevolesListe = filtres.filter(p => p.categorie !== 'salarie').sort(parNomPrenom);
+
+    function ajouterCarte(p) {
+      const card = document.createElement('button');
+      card.className = 'card' + (p.pointageStatus === 'present' ? ' present-card' : p.pointageStatus === 'done' ? ' done-card' : '');
+      card.innerHTML = `<div class="name">${p.prenom} ${p.nom}</div><div class="numero">N° ${p.numero}</div>${badge(p)}`;
+      card.onclick = () => openPointageModal(p);
+      grid.appendChild(card);
+    }
+
+    function ajouterEnTete(texte) {
+      const header = document.createElement('div');
+      header.className = 'kiosk-section-header';
+      header.textContent = texte;
+      grid.appendChild(header);
+    }
+
+    if (salaries.length) {
+      ajouterEnTete('Salariés');
+      salaries.forEach(ajouterCarte);
+    }
+    if (benevolesListe.length) {
+      if (salaries.length) ajouterEnTete('Bénévoles');
+      benevolesListe.forEach(ajouterCarte);
+    }
+  }
+
+  function openPointageModal(p) {
+    const action = p.depuisAutreJour ? 'regulariser' : (p.pointageStatus === 'present' ? 'depart' : 'arrivee');
+    pending = { id: p.id, action };
+    document.getElementById('modalPerson').textContent = p.prenom + ' ' + p.nom;
+    document.getElementById('modalTime').textContent = nowDateTimeStr();
+    const actionEl = document.getElementById('modalAction');
+    const warningZone = document.getElementById('warningZone');
+    warningZone.innerHTML = '';
+
+    if (action === 'regulariser') {
+      actionEl.textContent = 'RÉGULARISATION';
+      actionEl.className = 'action-word depart';
+      warningZone.innerHTML = `<div class="warning">⚠️ Le départ du ${formatDate(p.dateSession)} n'avait pas été pointé. En confirmant : cette ancienne session sera close avec une durée forfaitaire de 3h, puis votre arrivée d'aujourd'hui sera enregistrée.</div>`;
+    } else {
+      actionEl.textContent = action === 'arrivee' ? 'ARRIVÉE' : 'DÉPART';
+      actionEl.className = 'action-word ' + (action === 'arrivee' ? 'arrivee' : 'depart');
+      if (p.pointageStatus === 'done') {
+        warningZone.innerHTML = `<div class="warning">Cette personne a déjà pointé un départ aujourd'hui. Un nouveau pointage ouvrira une seconde session (collecte, retour l'après-midi…).</div>`;
+      }
+    }
+    document.getElementById('pointageOverlay').classList.add('open');
+  }
+  document.getElementById('btnCancel').onclick = () => { document.getElementById('pointageOverlay').classList.remove('open'); pending = null; };
+
+  document.getElementById('btnConfirm').onclick = async () => {
+    if (!pending) return;
+    const p = benevoles.find(x => x.id === pending.id);
+
+    if (pending.action === 'regulariser') {
+      // 1. Clôture l'ancienne session ouverte avec une durée forfaitaire de 3h
+      //    (on ne connaît pas la vraie heure de départ, donc pas question de
+      //    calculer une durée à partir de l'heure actuelle, qui n'aurait aucun sens).
+      const { data: ouvert } = await sb.from('pointages')
+        .select('id, heure_arrivee').eq('benevole_id', p.id).is('heure_depart', null).eq('type', 'presence')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (ouvert) {
+        const [h, m, s] = (ouvert.heure_arrivee || '00:00:00').split(':').map(Number);
+        const depart = new Date(2000, 0, 1, h, m, s);
+        depart.setHours(depart.getHours() + 3);
+        const heureDepartForfait = String(depart.getHours()).padStart(2, '0') + ':' + String(depart.getMinutes()).padStart(2, '0') + ':00';
+        const { error: err1 } = await sb.from('pointages').update({ heure_depart: heureDepartForfait }).eq('id', ouvert.id);
+        if (err1) { alert('Erreur lors de la régularisation, réessaie.'); return; }
+      }
+      // 2. Ouvre une nouvelle session pour aujourd'hui
+      const { error: err2 } = await sb.from('pointages').insert({
+        benevole_id: p.id, date: todayISO(), heure_arrivee: nowHHMMSS(), type: 'presence'
+      });
+      if (err2) { alert('Erreur lors du pointage, réessaie.'); return; }
+      showToast(`Session régularisée, arrivée enregistrée — ${p.prenom} ${p.nom}, ${nowStr()}`);
+
+    } else if (pending.action === 'arrivee') {
+      const { error } = await sb.from('pointages').insert({
+        benevole_id: p.id, date: todayISO(), heure_arrivee: nowHHMMSS(), type: 'presence'
+      });
+      if (error) { alert('Erreur lors du pointage, réessaie.'); return; }
+      showToast(`Arrivée enregistrée — ${p.prenom} ${p.nom}, ${nowStr()}`);
+    } else {
+      const { data: ouvert } = await sb.from('pointages')
+        .select('id').eq('benevole_id', p.id).is('heure_depart', null).eq('type', 'presence')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (ouvert) {
+        const { error } = await sb.from('pointages').update({ heure_depart: nowHHMMSS() }).eq('id', ouvert.id);
+        if (error) { alert('Erreur lors du pointage, réessaie.'); return; }
+      }
+      showToast(`Départ enregistré — ${p.prenom} ${p.nom}, ${nowStr()}`);
+    }
+
+    document.getElementById('pointageOverlay').classList.remove('open');
+    pending = null;
+    await chargerBenevoles();
+    renderKiosk();
+  };
+
+  search.addEventListener('input', renderKiosk);
+  function tickClock() { document.getElementById('clock').textContent = nowDateTimeStr(); }
+  tickClock(); setInterval(tickClock, 1000 * 10);
+
+  // ====================================================
+  // MODE ADMIN — BÉNÉVOLES (CRUD)
+  // ====================================================
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#adminView .view').forEach(v => v.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('view-' + btn.dataset.view).classList.add('active');
+    };
+  });
+
+  function statutBadge(s) {
+    const map = {
+      actif: '<span class="tag" style="background:var(--green-soft);color:var(--green);">Actif</span>',
+      longue_absence: '<span class="tag" style="background:var(--amber-soft);color:#8A5C16;">Longue absence</span>',
+      conges: '<span class="tag" style="background:var(--amber-soft);color:#8A5C16;">Congés</span>',
+      inactif: '<span class="tag" style="background:var(--danger-soft);color:var(--danger);font-weight:700;">Inactif</span>'
+    };
+    return map[s] || map.actif;
+  }
+
+  let editingId = null;
+  let sortColumn = 'nom';
+  let sortDirection = 'asc';
+  const STATUT_ORDRE = { actif: 0, longue_absence: 1, conges: 2, inactif: 3 };
+
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.onclick = () => {
+      const col = th.dataset.sort;
+      if (sortColumn === col) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = col;
+        sortDirection = 'asc';
+      }
+      renderBenevoles();
+    };
+  });
+
+  function updateSortArrows() {
+    ['nom', 'categorie', 'postes', 'statut'].forEach(col => {
+      const arrow = document.getElementById('arrow-' + col);
+      if (col === sortColumn) {
+        arrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
+        arrow.classList.add('active');
+      } else {
+        arrow.textContent = '▲';
+        arrow.classList.remove('active');
+      }
+    });
+  }
+
+  function categorieBadge(c) {
+    return c === 'salarie'
+      ? '<span class="tag" style="background:#E3ECF3;color:#3E6B8F;">Salarié</span>'
+      : '<span class="tag" style="background:var(--green-soft);color:var(--green);">Bénévole</span>';
+  }
+
+  function comparerBenevoles(a, b) {
+    let result = 0;
+    if (sortColumn === 'nom') {
+      result = a.nom.localeCompare(b.nom);
+    } else if (sortColumn === 'categorie') {
+      result = a.categorie.localeCompare(b.categorie) || a.nom.localeCompare(b.nom);
+    } else if (sortColumn === 'postes') {
+      const pa = a.postes.length ? a.postes.slice().sort().join(',') : '';
+      const pb = b.postes.length ? b.postes.slice().sort().join(',') : '';
+      result = pa.localeCompare(pb) || a.nom.localeCompare(b.nom);
+    } else if (sortColumn === 'statut') {
+      result = (STATUT_ORDRE[a.statut] ?? 99) - (STATUT_ORDRE[b.statut] ?? 99) || a.nom.localeCompare(b.nom);
+    }
+    return sortDirection === 'asc' ? result : -result;
+  }
+
+  function renderBenevoles() {
+    const q = document.getElementById('searchB').value.trim().toLowerCase();
+    const tbody = document.getElementById('tbodyB');
+    tbody.innerHTML = '';
+    updateSortArrows();
+    benevoles
+      .filter(b => (b.nom + ' ' + b.prenom).toLowerCase().includes(q) || b.numero.toString().includes(q))
+      .sort(comparerBenevoles)
+      .forEach(b => {
+        const tr = document.createElement('tr');
+        tr.className = 'row';
+        tr.innerHTML = `
+          <td>${b.numero}</td>
+          <td>${b.prenom} ${b.nom}</td>
+          <td>${categorieBadge(b.categorie)}</td>
+          <td>${(b.jours && b.jours.length) ? b.jours.join(', ') : '<span style="color:var(--ink-soft);font-size:13px;">—</span>'}</td>
+          <td>${b.postes.length ? b.postes.map(p => `<span class="tag">${p}</span>`).join('') : '<span style="color:var(--ink-soft);font-size:13px;">—</span>'}</td>
+          <td style="font-variant-numeric: tabular-nums;">${b.nb_presences ?? 0}</td>
+          <td>${statutBadge(b.statut)}</td>
+        `;
+        tr.onclick = () => openModal(b);
+        tbody.appendChild(tr);
+      });
+  }
+  document.getElementById('searchB').addEventListener('input', renderBenevoles);
+  document.getElementById('btnAdd').onclick = () => openModal(null);
+
+  function genererNumeroUnique() {
+    const pris = new Set(benevoles.map(b => b.numero));
+    let n;
+    do { n = Math.floor(Math.random() * 900) + 100; } while (pris.has(n));
+    return n;
+  }
+  document.getElementById('btnRegenererNumero').onclick = () => {
+    document.getElementById('fNumero').value = genererNumeroUnique();
+  };
+
+  // Renseigner une date de départ bascule automatiquement le statut sur Inactif
+  document.getElementById('fDateDepart').addEventListener('change', (e) => {
+    if (e.target.value) document.getElementById('fActif').value = 'inactif';
+  });
+
+  function openModal(b) {
+    editingId = b ? b.id : null;
+    document.getElementById('modalTitle').textContent = b ? 'Modifier la fiche' : 'Nouveau bénévole';
+    document.getElementById('modalNbPresences').textContent = b ? `${b.nb_presences ?? 0} présence${(b.nb_presences ?? 0) > 1 ? 's' : ''} enregistrée${(b.nb_presences ?? 0) > 1 ? 's' : ''} au total` : '';
+    document.getElementById('fNumero').value = b ? b.numero : genererNumeroUnique();
+    document.getElementById('fActif').value = b ? b.statut : 'actif';
+    document.getElementById('fCategorie').value = b ? b.categorie : 'benevole';
+    document.getElementById('fPrenom').value = b ? b.prenom : '';
+    document.getElementById('fNom').value = b ? b.nom : '';
+    document.getElementById('fRue').value = b ? (b.rue || '') : '';
+    document.getElementById('fCodePostal').value = b ? (b.code_postal || '') : '';
+    document.getElementById('fVille').value = b ? (b.ville || '') : '';
+    document.getElementById('fDistance').value = b ? (b.distance_km || '') : '';
+    document.getElementById('fTelephone').value = b ? (b.telephone || '') : '';
+    document.getElementById('fEmail').value = b ? (b.email || '') : '';
+    document.getElementById('fDateDepart').value = b ? (b.date_depart || '') : '';
+    document.getElementById('fTypeActivite').value = b ? (b.type_activite || '') : '';
+
+    const checksZone = document.getElementById('checksPostes');
+    checksZone.innerHTML = '';
+    const selected = b ? b.postes : [];
+    POSTES.forEach(p => {
+      const label = document.createElement('label');
+      label.className = 'check-pill' + (selected.includes(p) ? ' checked' : '');
+      label.innerHTML = `<input type="checkbox" value="${p}" ${selected.includes(p) ? 'checked' : ''}> ${p}`;
+      label.querySelector('input').onchange = (e) => label.classList.toggle('checked', e.target.checked);
+      checksZone.appendChild(label);
+    });
+
+    const joursZone = document.getElementById('checksJours');
+    joursZone.innerHTML = '';
+    const selectedJours = b ? (b.jours || []) : [];
+    JOURS.forEach(j => {
+      const label = document.createElement('label');
+      label.className = 'check-pill' + (selectedJours.includes(j) ? ' checked' : '');
+      label.innerHTML = `<input type="checkbox" value="${j}" ${selectedJours.includes(j) ? 'checked' : ''}> ${j}`;
+      label.querySelector('input').onchange = (e) => label.classList.toggle('checked', e.target.checked);
+      joursZone.appendChild(label);
+    });
+
+    document.getElementById('btnDelete').style.display = b ? 'inline' : 'none';
+    document.getElementById('overlay').classList.add('open');
+  }
+  document.getElementById('btnCancelModal').onclick = () => document.getElementById('overlay').classList.remove('open');
+
+  document.getElementById('btnSaveModal').onclick = async () => {
+    const numero = parseInt(document.getElementById('fNumero').value, 10);
+    if (!numero || numero < 100 || numero > 999) { alert('Numéro invalide (100–999, toujours 3 chiffres).'); return; }
+    const dupe = benevoles.find(b => b.numero === numero && b.id !== editingId);
+    if (dupe) { alert('Ce numéro est déjà attribué à ' + dupe.prenom + ' ' + dupe.nom + '.'); return; }
+
+    const postesChoisis = Array.from(document.querySelectorAll('#checksPostes input:checked')).map(i => i.value);
+    const joursChoisis = Array.from(document.querySelectorAll('#checksJours input:checked')).map(i => i.value);
+
+    const data = {
+      numero,
+      statut: document.getElementById('fActif').value,
+      categorie: document.getElementById('fCategorie').value,
+      prenom: document.getElementById('fPrenom').value.trim(),
+      nom: document.getElementById('fNom').value.trim(),
+      rue: document.getElementById('fRue').value.trim(),
+      code_postal: document.getElementById('fCodePostal').value.trim(),
+      ville: document.getElementById('fVille').value.trim(),
+      distance_km: document.getElementById('fDistance').value.trim() || null,
+      telephone: document.getElementById('fTelephone').value.trim(),
+      email: document.getElementById('fEmail').value.trim(),
+      date_depart: document.getElementById('fDateDepart').value || null,
+      type_activite: document.getElementById('fTypeActivite').value || null
+    };
+
+    // Si l'email change, on relâche l'ancien lien de connexion (auth_user_id)
+    // pour permettre une nouvelle liaison automatique à la prochaine connexion.
+    if (editingId !== null) {
+      const ancien = benevoles.find(b => b.id === editingId);
+      if (ancien && (ancien.email || '') !== data.email) {
+        data.auth_user_id = null;
+      }
+    }
+
+    let benevoleId = editingId;
+
+    if (editingId === null) {
+      const { data: inserted, error } = await sb.from('benevoles').insert(data).select().single();
+      if (error) { alert('Erreur : ' + error.message); return; }
+      benevoleId = inserted.id;
+    } else {
+      const { error } = await sb.from('benevoles').update(data).eq('id', editingId);
+      if (error) { alert('Erreur : ' + error.message); return; }
+    }
+
+    // Resynchronise postes qualifiés et jours habituels (delete + insert, simple et fiable)
+    await sb.from('benevole_postes').delete().eq('benevole_id', benevoleId);
+    if (postesChoisis.length) {
+      const rows = postesChoisis.map(nom => ({
+        benevole_id: benevoleId,
+        poste_id: POSTES_CONFIG.find(p => p.nom === nom).id
+      }));
+      await sb.from('benevole_postes').insert(rows);
+    }
+
+    await sb.from('disponibilites').delete().eq('benevole_id', benevoleId);
+    if (joursChoisis.length) {
+      const rows = joursChoisis.map(j => ({ benevole_id: benevoleId, jour_semaine: JOURS.indexOf(j) + 1 }));
+      await sb.from('disponibilites').insert(rows);
+    }
+
+    document.getElementById('overlay').classList.remove('open');
+    showToast(editingId === null ? 'Bénévole ajouté.' : 'Fiche mise à jour.');
+    await chargerBenevoles();
+    renderBenevoles(); renderCongeSelect();
+  };
+
+  document.getElementById('btnDelete').onclick = async () => {
+    const avertissement = 'ATTENTION : la suppression est définitive et irréversible.\n\n' +
+      'Elle efface aussi tout l\'historique lié (pointages, congés) — ce qui fausserait tes bilans des années passées.\n\n' +
+      '⚠️ Si ce bénévole a réellement participé et quitte l\'association, utilise plutôt "Date de départ" (statut Inactif) — ça conserve son historique tout en respectant le RGPD.\n\n' +
+      'La suppression n\'est à utiliser que pour une fiche créée par erreur (doublon, test, faute de frappe).\n\n' +
+      'Confirmer la suppression définitive ?';
+    if (!confirm(avertissement)) return;
+    const { error } = await sb.from('benevoles').delete().eq('id', editingId);
+    if (error) { alert('Erreur : ' + error.message); return; }
+    document.getElementById('overlay').classList.remove('open');
+    await chargerBenevoles();
+    renderBenevoles(); renderCongeSelect();
+    showToast('Bénévole supprimé.');
+  };
+
+  // ====================================================
+  // MODE ADMIN — CONGÉS / ABSENCES
+  // ====================================================
+  function renderCongeSelect() {
+    const sel = document.getElementById('congeBenevole');
+    sel.innerHTML = benevoles
+      .filter(b => b.statut === 'actif')
+      .sort((a,b) => a.nom.localeCompare(b.nom))
+      .map(b => `<option value="${b.id}">${b.prenom} ${b.nom}</option>`)
+      .join('');
+  }
+
+  document.getElementById('btnAddConge').onclick = async () => {
+    const benevole_id = document.getElementById('congeBenevole').value;
+    const debut = document.getElementById('congeDebut').value;
+    const fin = document.getElementById('congeFin').value;
+    if (!debut || !fin) { alert('Merci de renseigner les deux dates.'); return; }
+    if (fin < debut) { alert('La date de fin doit être après la date de début.'); return; }
+
+    const { error } = await sb.from('conges').insert({ benevole_id, debut, fin, type: 'absence', origine: 'admin' });
+    if (error) { alert('Erreur : ' + error.message); return; }
+    await chargerConges();
+    renderConges();
+    showToast('Période ajoutée.');
+  };
+
+  function renderConges() {
+    const zone = document.getElementById('congeList');
+    zone.innerHTML = '';
+    conges.forEach(c => {
+      const b = c.benevoles;
+      const div = document.createElement('div');
+      div.className = 'conge-list-item';
+      div.innerHTML = `
+        <div>
+          <div class="who">${b ? b.prenom + ' ' + b.nom : '—'} ${c.origine === 'benevole' ? '<span class="tag" style="background:var(--green-soft);color:var(--green);margin-left:6px;">Saisi par le bénévole</span>' : ''}</div>
+          <div class="period">${formatDate(c.debut)} → ${formatDate(c.fin)}</div>
+        </div>
+        <button class="btn-remove" data-id="${c.id}">Retirer</button>
+      `;
+      div.querySelector('.btn-remove').onclick = async () => {
+        await sb.from('conges').delete().eq('id', c.id);
+        await chargerConges();
+        renderConges();
+      };
+      zone.appendChild(div);
+    });
+  }
+
+  // ====================================================
+  // FERMETURES DE LA BA (globales, tout le monde)
+  // ====================================================
+  let fermetures = [];
+
+  async function chargerFermetures() {
+    const { data, error } = await sb.from('fermetures').select('*').order('debut', { ascending: false });
+    if (!error) fermetures = data || [];
+  }
+
+  let editingFermetureId = null;
+
+  function renderFermetures() {
+    const zone = document.getElementById('fermetureList');
+    if (!zone) return;
+    zone.innerHTML = '';
+    fermetures.forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'conge-list-item';
+      div.style.cursor = 'pointer';
+      div.innerHTML = `
+        <div>
+          <div class="who">${f.motif || 'Fermeture'}</div>
+          <div class="period">${formatDate(f.debut)} → ${formatDate(f.fin)}</div>
+        </div>
+        <button class="btn-remove" data-id="${f.id}">Retirer</button>
+      `;
+      div.onclick = () => {
+        editingFermetureId = f.id;
+        document.getElementById('fermetureDebut').value = f.debut;
+        document.getElementById('fermetureFin').value = f.fin;
+        document.getElementById('fermetureMotif').value = f.motif || '';
+        document.getElementById('btnAddFermeture').textContent = 'Enregistrer la modification';
+        document.getElementById('btnAnnulerFermeture').classList.remove('hidden');
+      };
+      div.querySelector('.btn-remove').onclick = async (e) => {
+        e.stopPropagation();
+        await sb.from('fermetures').delete().eq('id', f.id);
+        await chargerFermetures();
+        renderFermetures();
+      };
+      zone.appendChild(div);
+    });
+  }
+
+  function resetFormulaireFermeture() {
+    editingFermetureId = null;
+    document.getElementById('fermetureDebut').value = '';
+    document.getElementById('fermetureFin').value = '';
+    document.getElementById('fermetureMotif').value = '';
+    document.getElementById('btnAddFermeture').textContent = 'Ajouter';
+    document.getElementById('btnAnnulerFermeture').classList.add('hidden');
+  }
+  document.getElementById('btnAnnulerFermeture').onclick = resetFormulaireFermeture;
+
+  document.getElementById('btnAddFermeture').onclick = async () => {
+    const debut = document.getElementById('fermetureDebut').value;
+    const fin = document.getElementById('fermetureFin').value;
+    const motif = document.getElementById('fermetureMotif').value.trim();
+    if (!debut || !fin) { alert('Merci de renseigner les deux dates.'); return; }
+    if (fin < debut) { alert('La date de fin doit être après la date de début.'); return; }
+
+    if (editingFermetureId) {
+      const { error } = await sb.from('fermetures').update({ debut, fin, motif: motif || null }).eq('id', editingFermetureId);
+      if (error) { alert('Erreur : ' + error.message); return; }
+      showToast('Fermeture modifiée.');
+    } else {
+      const { error } = await sb.from('fermetures').insert({ debut, fin, motif: motif || null });
+      if (error) { alert('Erreur : ' + error.message); return; }
+      showToast('Fermeture ajoutée.');
+    }
+
+    resetFormulaireFermeture();
+    await chargerFermetures();
+    renderFermetures();
+  };
+
+  function fermetureDuJour(dateStr) {
+    return fermetures.find(f => dateStr >= f.debut && dateStr <= f.fin);
+  }
+
+  // ====================================================
+  // JOURS FÉRIÉS FRANÇAIS (calculés automatiquement, chaque année)
+  // ====================================================
+
+  // Date de Pâques (algorithme de Meeus/Jones/Butcher, calendrier grégorien)
+  function calculerPaques(annee) {
+    const a = annee % 19;
+    const b = Math.floor(annee / 100);
+    const c = annee % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const mois = Math.floor((h + l - 7 * m + 114) / 31);
+    const jour = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(Date.UTC(annee, mois - 1, jour));
+  }
+
+  function dateISOPlusJours(date, n) {
+    const d = new Date(date);
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // Renvoie un dictionnaire { 'AAAA-MM-JJ': 'Nom du jour férié' } pour une année donnée
+  function joursFeriesFrancais(annee) {
+    const paques = calculerPaques(annee);
+    const feries = {};
+    feries[`${annee}-01-01`] = 'Jour de l\'An';
+    feries[`${annee}-05-01`] = 'Fête du Travail';
+    feries[`${annee}-05-08`] = 'Victoire 1945';
+    feries[`${annee}-07-14`] = 'Fête Nationale';
+    feries[`${annee}-08-15`] = 'Assomption';
+    feries[`${annee}-11-01`] = 'Toussaint';
+    feries[`${annee}-11-11`] = 'Armistice';
+    feries[`${annee}-12-25`] = 'Noël';
+    feries[dateISOPlusJours(paques, 1)] = 'Lundi de Pâques';
+    feries[dateISOPlusJours(paques, 39)] = 'Ascension';
+    feries[dateISOPlusJours(paques, 50)] = 'Lundi de Pentecôte';
+    return feries;
+  }
+
+  // Retourne le nom du jour férié si dateStr en est un, sinon null
+  function estJourFerie(dateStr) {
+    const annee = parseInt(dateStr.slice(0, 4), 10);
+    return joursFeriesFrancais(annee)[dateStr] || null;
+  }
+
+  // Fermeture "effective" : combine les fermetures ponctuelles (Noël, août...),
+  // le dimanche, ET les jours fériés — tout automatique, rien à ressaisir chaque année.
+  function fermetureEffective(dateStr) {
+    const jourJs = new Date(dateStr + 'T12:00:00').getDay();
+    if (jourJs === 0) {
+      return { motif: 'Fermé le dimanche', debut: dateStr, fin: dateStr };
+    }
+    const ferie = estJourFerie(dateStr);
+    if (ferie) {
+      return { motif: `Jour férié — ${ferie}`, debut: dateStr, fin: dateStr };
+    }
+    return fermetureDuJour(dateStr);
+  }
+
+  // ====================================================
+  // MODE ADMIN — PLANNING (persistant, avec édition manuelle)
+  // ====================================================
+  function infosJour(dateStr) {
+    const jourJs = new Date(dateStr + 'T12:00:00').getDay();
+    const jourLabel = JOUR_JS_TO_LABEL[jourJs];
+    if (!jourLabel) return { ferme: true, motif: 'Fermé le week-end', jourLabel: null };
+    const fermetureActive = fermetureEffective(dateStr);
+    if (fermetureActive) return { ferme: true, motif: fermetureActive.motif || 'Fermeture', jourLabel };
+    return { ferme: false, motif: null, jourLabel };
+  }
+
+  function genererPropositionJour(dateStr) {
+    const infos = infosJour(dateStr);
+    if (infos.ferme) return { ...infos, assignments: {}, nonAffectes: [] };
+
+    const dispo = benevoles.filter(b =>
+      b.statut === 'actif' &&
+      b.jours.includes(infos.jourLabel) &&
+      !conges.some(c => c.benevole_id === b.id && dateStr >= c.debut && dateStr <= c.fin)
+    );
+
+    const ordre = dispo.slice().sort((a, b) => a.postes.length - b.postes.length);
+    const assignments = {};
+    POSTES_CONFIG.forEach(p => assignments[p.nom] = []);
+    const nonAffectes = [];
+
+    ordre.forEach(b => {
+      if (b.postes.length === 0) { nonAffectes.push({ b, raison: 'aucun poste qualifié sur sa fiche' }); return; }
+      const candidats = b.postes
+        .map(nom => POSTES_CONFIG.find(p => p.nom === nom))
+        .filter(p => p && (p.max === null || assignments[p.nom].length < p.max));
+      if (candidats.length === 0) { nonAffectes.push({ b, raison: 'ses postes qualifiés sont déjà complets' }); return; }
+      candidats.sort((p1, p2) => {
+        const manque1 = Math.max(0, p1.min - assignments[p1.nom].length);
+        const manque2 = Math.max(0, p2.min - assignments[p2.nom].length);
+        return manque2 - manque1;
+      });
+      assignments[candidats[0].nom].push(b);
+    });
+
+    return { ...infos, assignments, nonAffectes };
+  }
+
+  async function chargerPlanningExistant(lundi) {
+    const vendredi = ajouterJours(lundi, 4);
+    const { data, error } = await sb.from('planning')
+      .select('date, poste_id, benevole_id, destination, postes(nom), benevoles(id, nom, prenom, numero)')
+      .gte('date', lundi).lte('date', vendredi);
+    if (error) { console.error(error); return null; }
+    if (!data || data.length === 0) return null;
+
+    const joursData = [];
+    for (let i = 0; i < 5; i++) {
+      const dateStr = ajouterJours(lundi, i);
+      const infos = infosJour(dateStr);
+      const assignments = {};
+      POSTES_CONFIG.forEach(p => assignments[p.nom] = []);
+      data.filter(r => r.date === dateStr).forEach(r => {
+        const posteNom = r.postes ? r.postes.nom : null;
+        if (posteNom && assignments[posteNom] && r.benevoles) {
+          assignments[posteNom].push({ id: r.benevole_id, nom: r.benevoles.nom, prenom: r.benevoles.prenom, numero: r.benevoles.numero, destination: r.destination || null });
+        }
+      });
+      joursData.push({ dateStr, ...infos, assignments, nonAffectes: [] });
+    }
+    return joursData;
+  }
+
+  async function enregistrerPlanning(lundi, joursData) {
+    const vendredi = ajouterJours(lundi, 4);
+    const { error: delErr } = await sb.from('planning').delete().gte('date', lundi).lte('date', vendredi);
+    if (delErr) { alert('Erreur lors de l\'enregistrement : ' + delErr.message); return false; }
+
+    const rows = [];
+    joursData.forEach(j => {
+      if (j.ferme) return;
+      POSTES_CONFIG.forEach(p => {
+        (j.assignments[p.nom] || []).forEach(b => {
+          rows.push({ date: j.dateStr, poste_id: p.id, benevole_id: b.id, valide: true, destination: b.destination || null });
+        });
+      });
+    });
+
+    if (rows.length) {
+      const { error: insErr } = await sb.from('planning').insert(rows);
+      if (insErr) { alert('Erreur lors de l\'enregistrement : ' + insErr.message); return false; }
+    }
+    return true;
+  }
+
+  function lundiDeLaSemaine(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const jourJs = d.getDay();
+    const decalage = jourJs === 0 ? -6 : 1 - jourJs;
+    d.setDate(d.getDate() + decalage);
+    return d.toISOString().slice(0, 10);
+  }
+  function ajouterJours(dateStr, n) {
+    const d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  document.getElementById('planningDate').addEventListener('change', (e) => {
+    if (e.target.value) e.target.value = lundiDeLaSemaine(e.target.value);
+  });
+  document.getElementById('btnSemaineSuivante').onclick = () => {
+    const lundiActuel = lundiDeLaSemaine(new Date().toISOString().slice(0, 10));
+    document.getElementById('planningDate').value = ajouterJours(lundiActuel, 7);
+  };
+  document.getElementById('btnImprimer').onclick = () => window.print();
+
+  // État courant du planning affiché
+  let planningAffiche = null;
+  let planningLundiActuel = null;
+  let planningEstEnregistre = false;
+
+  function afficherPlanning() {
+    const lundi = planningLundiActuel;
+    const joursData = planningAffiche;
+    const zone = document.getElementById('planningResult');
+    const statutZone = document.getElementById('planningStatut');
+
+    statutZone.innerHTML = planningEstEnregistre
+      ? `<span class="planning-statut-badge enregistre">✓ Planning enregistré — clique un nom pour le remplacer</span>`
+      : `<span class="planning-statut-badge proposition">⚠ Proposition non enregistrée — clique « Enregistrer ce planning » pour la valider</span>`;
+
+    let html = `<div class="jour-header">Semaine du ${formatDate(lundi)} au ${formatDate(ajouterJours(lundi, 4))}</div>`;
+
+    const joursFermes = joursData.filter(j => j.ferme);
+    if (joursFermes.length) {
+      html += `<div class="nonaffectes-box" style="margin-bottom:20px;">`;
+      joursFermes.forEach(j => {
+        html += `<div class="item"><strong>${formatDate(j.dateStr)}</strong> — ${j.motif}</div>`;
+      });
+      html += `</div>`;
+    }
+
+    const filtrePoste = document.getElementById('planningFiltrePoste').value;
+    const postesAAfficher = filtrePoste ? POSTES_CONFIG.filter(p => p.nom === filtrePoste) : POSTES_CONFIG;
+
+    postesAAfficher.forEach(p => {
+      const counts = joursData.map(j => j.ferme ? 0 : (j.assignments[p.nom] || []).length);
+      const maxRows = p.max !== null ? p.max : Math.max(1, ...counts);
+      const cible = p.max === null ? 'pas de minimum fixe' : (p.min === p.max ? `${p.min} personne${p.min > 1 ? 's' : ''}` : `${p.min} à ${p.max} personnes max`);
+
+      html += `<div class="poste-table-wrap">
+        <div class="poste-table-title">${p.nom} <span class="poste-table-sub">— ${cible}</span></div>
+        <table class="planning-table">
+          <thead><tr><th>N°</th>${joursData.map((j, i) => `<th>${JOURS_SEMAINE[i]}<br>${formatDate(j.dateStr)}</th>`).join('')}</tr></thead>
+          <tbody>`;
+      for (let row = 0; row < maxRows; row++) {
+        html += `<tr><td class="row-num">${row + 1}</td>`;
+        joursData.forEach(j => {
+          if (j.ferme) { html += `<td style="color:var(--ink-soft);font-style:italic;">${row === 0 ? 'Fermé' : ''}</td>`; return; }
+          const b = (j.assignments[p.nom] || [])[row];
+          const manque = row < p.min && !b;
+          const badge = (b && b.destination) ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">🚚 ${b.destination}</span>` : '';
+          html += `<td class="${manque ? 'cell-manque' : ''} cell-editable" data-date="${j.dateStr}" data-poste-id="${p.id}" data-poste-nom="${p.nom}" data-row="${row}">${b ? b.prenom + ' ' + b.nom + badge : ''}</td>`;
+        });
+        html += `</tr>`;
+      }
+      html += `</tbody></table></div>`;
+    });
+
+    const auMoinsUnNonAffecte = joursData.some(j => j.nonAffectes && j.nonAffectes.length);
+    if (auMoinsUnNonAffecte) {
+      html += `<div class="nonaffectes-box"><h3>Disponibles mais non affectés cette semaine</h3>`;
+      joursData.forEach((j, i) => {
+        if (j.nonAffectes && j.nonAffectes.length) {
+          html += `<div style="margin-bottom:8px;"><strong>${JOURS_SEMAINE[i]}</strong><br>`;
+          j.nonAffectes.forEach(n => {
+            html += `<div class="item">${n.b.prenom} ${n.b.nom} <span class="raison">— ${n.raison}</span></div>`;
+          });
+          html += `</div>`;
+        }
+      });
+      html += `</div>`;
+    }
+
+    zone.innerHTML = html;
+    document.getElementById('btnImprimer').classList.remove('hidden');
+    document.getElementById('btnRegenererPlanning').classList.remove('hidden');
+    document.getElementById('btnEnregistrerPlanning').classList.remove('hidden');
+    document.getElementById('planningFiltreZone').classList.remove('hidden');
+    document.getElementById('btnEnvoyerPlanning').classList.toggle('hidden', !planningEstEnregistre);
+    document.getElementById('planningEmailTest').classList.toggle('hidden', !planningEstEnregistre);
+  }
+
+  document.getElementById('btnEnvoyerPlanning').onclick = async () => {
+    if (!planningLundiActuel) return;
+    const emailTest = document.getElementById('planningEmailTest').value.trim();
+    const semaineTxt = `Semaine du ${formatDate(planningLundiActuel)} au ${formatDate(ajouterJours(planningLundiActuel, 4))}.`;
+
+    if (emailTest) {
+      // Mode test : risque faible (un seul destinataire choisi), simple confirmation suffit
+      if (!confirm(`Envoyer ce planning UNIQUEMENT à titre de test à : ${emailTest}\n\n(personne d'autre ne recevra rien)\n\n${semaineTxt}`)) return;
+    } else {
+      // Envoi réel à tout le monde : confirmation renforcée, un clic accidentel ne suffit pas
+      const saisie = prompt(
+        `⚠️ Tu es sur le point d'envoyer ce planning à TOUS les bénévoles/salariés actifs.\n\n${semaineTxt}\n\n` +
+        `Pour confirmer, tape exactement le mot ENVOYER ci-dessous :`
+      );
+      if (saisie !== 'ENVOYER') {
+        if (saisie !== null) alert('Envoi annulé : le mot tapé ne correspond pas exactement à "ENVOYER".');
+        return;
+      }
+    }
+
+    const btn = document.getElementById('btnEnvoyerPlanning');
+    btn.disabled = true;
+    btn.textContent = 'Envoi en cours…';
+
+    const { data, error } = await sb.functions.invoke('envoyer-planning-hebdo', {
+      body: { lundi: planningLundiActuel, emailTest: emailTest || null }
+    });
+
+    btn.disabled = false;
+    btn.textContent = '✉️ Envoyer';
+
+    if (error) { alert('Erreur lors de l\'envoi : ' + error.message); return; }
+    if (data && data.status === 'planning_envoye') {
+      showToast(emailTest ? `Email de test envoyé à ${emailTest}.` : `Planning envoyé à ${data.destinataires} destinataire(s).`);
+    } else if (data && data.status === 'aucun_planning') {
+      alert('Aucun planning enregistré pour cette semaine — rien n\'a été envoyé.');
+    } else {
+      alert('Résultat inattendu : ' + JSON.stringify(data));
+    }
+  };
+
+  document.getElementById('planningFiltrePoste').addEventListener('change', () => {
+    if (planningAffiche) afficherPlanning();
+  });
+
+  // Clic sur une case = édition (remplacement par n'importe quel bénévole)
+  document.getElementById('planningResult').addEventListener('click', (e) => {
+    const td = e.target.closest('.cell-editable');
+    if (!td || td.querySelector('select')) return;
+
+    const dateStr = td.dataset.date;
+    const posteNom = td.dataset.posteNom;
+    const row = parseInt(td.dataset.row, 10);
+    const jourObj = planningAffiche.find(j => j.dateStr === dateStr);
+    const actuel = (jourObj.assignments[posteNom] || [])[row] || null;
+
+    const select = document.createElement('select');
+    select.className = 'cell-edit-select';
+    select.innerHTML = '<option value="">— vide —</option>' +
+      benevoles.slice().sort((a, b) => a.nom.localeCompare(b.nom)).map(b =>
+        `<option value="${b.id}" ${actuel && actuel.id === b.id ? 'selected' : ''}>${b.prenom} ${b.nom}</option>`
+      ).join('');
+
+    select.onclick = (ev) => ev.stopPropagation();
+    select.onchange = async () => {
+      const nouveauId = select.value;
+      const nouveau = nouveauId ? benevoles.find(b => b.id === nouveauId) : null;
+
+      // Vérifie si la personne choisie est en congé/absence ce jour précis
+      if (nouveau) {
+        const congeEnCours = conges.find(c => c.benevole_id === nouveau.id && dateStr >= c.debut && dateStr <= c.fin);
+        if (congeEnCours) {
+          const confirmation = confirm(
+            `⚠️ ${nouveau.prenom} ${nouveau.nom} est déclaré(e) absent(e) du ${formatDate(congeEnCours.debut)} au ${formatDate(congeEnCours.fin)}, ` +
+            `ce qui couvre le ${formatDate(dateStr)}.\n\n` +
+            `Confirmer quand même cette affectation, ou annuler pour choisir quelqu'un d'autre ?\n\n` +
+            `OK = confirmer malgré tout / Annuler = revenir en arrière`
+          );
+          if (!confirmation) {
+            select.value = actuel ? actuel.id : '';
+            return;
+          }
+        }
+      }
+
+      // Met à jour la donnée en mémoire
+      const liste = jourObj.assignments[posteNom] || [];
+      if (nouveau) liste[row] = nouveau;
+      else liste.splice(row, 1);
+      jourObj.assignments[posteNom] = liste;
+
+      // Si déjà enregistré en base, persiste immédiatement ce changement précis
+      if (planningEstEnregistre) {
+        const posteId = POSTES_CONFIG.find(p => p.nom === posteNom).id;
+        if (actuel) await sb.from('planning').delete().eq('date', dateStr).eq('poste_id', posteId).eq('benevole_id', actuel.id);
+        if (nouveau) await sb.from('planning').insert({ date: dateStr, poste_id: posteId, benevole_id: nouveau.id, valide: true });
+        showToast('Planning mis à jour.');
+      }
+
+      afficherPlanning();
+    };
+
+    td.textContent = '';
+    td.appendChild(select);
+
+    // Case "Saint-Brieuc" : uniquement sur le poste Chauffeur, et seulement
+    // si une personne est déjà affectée sur ce créneau (rien à annoter sinon)
+    if (posteNom === 'Chauffeur' && actuel) {
+      const label = document.createElement('label');
+      label.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;margin-top:4px;cursor:pointer;';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = actuel.destination === 'Saint-Brieuc';
+      checkbox.onclick = (ev) => ev.stopPropagation();
+      checkbox.onchange = async () => {
+        actuel.destination = checkbox.checked ? 'Saint-Brieuc' : null;
+        if (planningEstEnregistre) {
+          const posteId = POSTES_CONFIG.find(p => p.nom === posteNom).id;
+          await sb.from('planning').update({ destination: actuel.destination })
+            .eq('date', dateStr).eq('poste_id', posteId).eq('benevole_id', actuel.id);
+          showToast('Planning mis à jour.');
+        }
+        afficherPlanning();
+      };
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode('🚚 Saint-Brieuc'));
+      td.appendChild(label);
+    }
+
+    select.focus();
+  });
+
+  document.getElementById('btnGenererPlanning').onclick = async () => {
+    const dateChoisie = document.getElementById('planningDate').value;
+    if (!dateChoisie) { alert('Choisis une date, n\'importe quel jour de la semaine visée.'); return; }
+    const lundi = lundiDeLaSemaine(dateChoisie);
+    planningLundiActuel = lundi;
+
+    const existant = await chargerPlanningExistant(lundi);
+    if (existant) {
+      planningAffiche = existant;
+      planningEstEnregistre = true;
+    } else {
+      planningAffiche = [];
+      for (let i = 0; i < 5; i++) planningAffiche.push({ dateStr: ajouterJours(lundi, i), ...genererPropositionJour(ajouterJours(lundi, i)) });
+      planningEstEnregistre = false;
+    }
+    afficherPlanning();
+  };
+
+  document.getElementById('btnRegenererPlanning').onclick = () => {
+    if (!planningLundiActuel) return;
+    if (planningEstEnregistre && !confirm('Un planning est déjà enregistré pour cette semaine. Le régénérer va calculer une nouvelle proposition à l\'écran (rien n\'est perdu tant que tu ne cliques pas « Enregistrer »). Continuer ?')) return;
+    const lundi = planningLundiActuel;
+    planningAffiche = [];
+    for (let i = 0; i < 5; i++) planningAffiche.push({ dateStr: ajouterJours(lundi, i), ...genererPropositionJour(ajouterJours(lundi, i)) });
+    planningEstEnregistre = false;
+    afficherPlanning();
+  };
+
+  document.getElementById('btnEnregistrerPlanning').onclick = async () => {
+    if (!planningAffiche || !planningLundiActuel) return;
+    const ok = await enregistrerPlanning(planningLundiActuel, planningAffiche);
+    if (ok) {
+      planningEstEnregistre = true;
+      showToast('Planning enregistré.');
+      afficherPlanning();
+    }
+  };
+
+  // ====================================================
+  // MODE ADMIN — PARAMÈTRES (taux de valorisation + IK)
+  // ====================================================
+  async function chargerParametres() {
+    const { data: taux } = await sb.from('taux_valorisation').select('*').order('annee', { ascending: false });
+    const { data: ik } = await sb.from('taux_kilometrique').select('*').order('annee', { ascending: false });
+
+    const annees = {};
+    (taux || []).forEach(t => {
+      annees[t.annee] = annees[t.annee] || {};
+      annees[t.annee][t.type_activite] = t.taux_horaire;
+    });
+    (ik || []).forEach(k => {
+      annees[k.annee] = annees[k.annee] || {};
+      annees[k.annee].ik = k.taux_par_km;
+    });
+
+    const tbody = document.getElementById('tbodyParametres');
+    tbody.innerHTML = '';
+    Object.keys(annees).sort((a, b) => b - a).forEach(annee => {
+      const v = annees[annee];
+      const tr = document.createElement('tr');
+      tr.className = 'row';
+      tr.innerHTML = `
+        <td>${annee}</td>
+        <td>${v.direction != null ? v.direction + ' €' : '—'}</td>
+        <td>${v.cadre != null ? v.cadre + ' €' : '—'}</td>
+        <td>${v.agent != null ? v.agent + ' €' : '—'}</td>
+        <td>${v.autre != null ? v.autre + ' €' : '—'}</td>
+        <td>${v.ik != null ? v.ik + ' €' : '—'}</td>
+      `;
+      tr.onclick = () => {
+        document.getElementById('paramAnnee').value = annee;
+        document.getElementById('paramDirection').value = v.direction ?? '';
+        document.getElementById('paramCadre').value = v.cadre ?? '';
+        document.getElementById('paramAgent').value = v.agent ?? '';
+        document.getElementById('paramAutre').value = v.autre ?? '';
+        document.getElementById('paramIK').value = v.ik ?? '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('btnSaveParametres').onclick = async () => {
+    const annee = parseInt(document.getElementById('paramAnnee').value, 10);
+    if (!annee) { alert('Merci de renseigner une année.'); return; }
+
+    const valeurs = {
+      direction: document.getElementById('paramDirection').value.trim(),
+      cadre: document.getElementById('paramCadre').value.trim(),
+      agent: document.getElementById('paramAgent').value.trim(),
+      autre: document.getElementById('paramAutre').value.trim(),
+    };
+    const ik = document.getElementById('paramIK').value.trim();
+
+    const rows = Object.entries(valeurs)
+      .filter(([, v]) => v !== '')
+      .map(([type_activite, taux_horaire]) => ({ annee, type_activite, taux_horaire: parseFloat(taux_horaire) }));
+
+    if (rows.length) {
+      const { error } = await sb.from('taux_valorisation').upsert(rows, { onConflict: 'annee,type_activite' });
+      if (error) { alert('Erreur taux horaires : ' + error.message); return; }
+    }
+
+    if (ik !== '') {
+      const { error } = await sb.from('taux_kilometrique').upsert(
+        { annee, taux_par_km: parseFloat(ik) }, { onConflict: 'annee' }
+      );
+      if (error) { alert('Erreur indemnité kilométrique : ' + error.message); return; }
+    }
+
+    showToast(`Paramètres ${annee} enregistrés.`);
+    await chargerParametres();
+  };
+
+  // ====================================================
+  // MODE ADMIN — BILANS ANNUELS
+  // ====================================================
+  let bilanBenevolesData = [];
+  const LABEL_ACTIVITE = { direction: 'Direction', cadre: 'Cadre', agent: 'Agent', autre: 'Autre' };
+
+  document.getElementById('btnCalculerBilan').onclick = async () => {
+    const annee = parseInt(document.getElementById('bilanAnnee').value, 10);
+    if (!annee) { alert('Merci de renseigner une année.'); return; }
+
+    const resumeZone = document.getElementById('bilanResume');
+    resumeZone.innerHTML = '<div style="color:var(--ink-soft);font-size:14px;">Calcul en cours…</div>';
+
+    const [{ data: parCategorie, error: e1 }, { data: totalIK, error: e2 }, { data: parBenevole, error: e3 }] = await Promise.all([
+      sb.rpc('bilan_association_annuel', { p_annee: annee }),
+      sb.rpc('total_indemnites_km_annuel', { p_annee: annee }),
+      sb.rpc('bilan_tous_benevoles_annuel', { p_annee: annee })
+    ]);
+
+    if (e1 || e2 || e3) {
+      resumeZone.innerHTML = '<div style="color:var(--danger);font-size:14px;">Erreur lors du calcul. Vérifie que les taux de cette année sont bien renseignés dans l\'onglet Paramètres.</div>';
+      return;
+    }
+
+    let totalGeneral = totalIK || 0;
+    let html = '<div class="bilan-cards">';
+    (parCategorie || []).forEach(c => {
+      totalGeneral += c.cout_valorise_heures || 0;
+      html += `
+        <div class="bilan-card">
+          <div class="label">${LABEL_ACTIVITE[c.type_activite] || c.type_activite}</div>
+          <div class="valeur">${(c.cout_valorise_heures || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+          <div class="sous">${c.nb_benevoles} bénévole${c.nb_benevoles > 1 ? 's' : ''} · ${c.total_heures} h · ${c.taux_horaire ?? '—'} €/h</div>
+        </div>`;
+    });
+    html += `
+      <div class="bilan-card">
+        <div class="label">Indemnités kilométriques</div>
+        <div class="valeur">${(totalIK || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+        <div class="sous">Toutes catégories confondues</div>
+      </div>`;
+    html += '</div>';
+    html += `
+      <div class="bilan-total">
+        <span class="label">Coût total valorisé ${annee}</span>
+        <span class="valeur">${totalGeneral.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+      </div>`;
+    resumeZone.innerHTML = html;
+
+    bilanBenevolesData = parBenevole || [];
+    renderBilanBenevoles();
+  };
+
+  function renderBilanBenevoles() {
+    const q = document.getElementById('searchBilan').value.trim().toLowerCase();
+    const tbody = document.getElementById('tbodyBilanBenevoles');
+    tbody.innerHTML = '';
+    bilanBenevolesData
+      .filter(b => (b.nom + ' ' + b.prenom).toLowerCase().includes(q))
+      .forEach(b => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${b.numero}</td>
+          <td>${b.prenom} ${b.nom}</td>
+          <td>${b.nb_jours_presence}</td>
+          <td>${b.total_heures} h</td>
+          <td>${b.nb_jours_conge}</td>
+          <td>${b.distance_totale_km} km</td>
+          <td>${b.montant_indemnite_km.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
+        `;
+        tbody.appendChild(tr);
+      });
+  }
+  document.getElementById('searchBilan').addEventListener('input', renderBilanBenevoles);
+
+  // ====================================================
+  // TOAST + DÉMARRAGE
+  // ====================================================
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  chargerTout().then(renderKiosk);
+</script>
+
+</body>
+</html>

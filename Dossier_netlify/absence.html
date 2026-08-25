@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Mes congés — Banque Alimentaire de Lannion</title>
+<style>
+  :root {
+    --bg: #FAF6EF; --panel: #FFFFFF; --ink: #23261F; --ink-soft: #6B6A5E;
+    --green: #33513F; --green-soft: #E4EBE3; --line: #E5DFCF; --danger: #B4462F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink);
+    font-family: 'Public Sans','Segoe UI', system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .box { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 36px 32px; width: 100%; max-width: 440px; }
+  .mark { font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: var(--green); text-align: center; }
+  .sub { color: var(--ink-soft); font-size: 14px; text-align: center; margin: 6px 0 22px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; }
+  .field input, .field select { width: 100%; padding: 12px 14px; font-size: 15px; border: 2px solid var(--line); border-radius: 10px; outline: none; box-sizing: border-box; }
+  .field input:focus, .field select:focus { border-color: var(--green); }
+  .field-row { display: flex; gap: 12px; }
+  .field-row .field { flex: 1; }
+  .btn { width: 100%; padding: 14px; font-size: 15px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; }
+  .btn-primary { background: var(--green); color: white; }
+  .btn-secondary { background: #EFEDE4; color: var(--ink); margin-top: 8px; }
+  .error { color: var(--danger); font-size: 13px; min-height: 18px; margin: 4px 0 8px; }
+  .hidden { display: none !important; }
+  .conge-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg); border: 2px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
+  .conge-item .who { font-weight: 700; font-size: 14px; }
+  .conge-item .period { color: var(--ink-soft); font-size: 13px; }
+  .conge-item button { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; }
+  .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green); color: white; padding: 13px 22px; border-radius: 10px; font-weight: 600; opacity: 0; transition: 0.25s ease; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="box">
+  <!-- Étape 1 : demande du lien -->
+  <div id="etapeEmail">
+    <div class="mark">Mes congés / absences</div>
+    <div class="sub">Reçois un lien de connexion par email</div>
+    <div class="field">
+      <label>Votre adresse email</label>
+      <input type="email" id="champEmail" placeholder="prenom.nom@exemple.fr">
+    </div>
+    <div class="error" id="erreurEmail"></div>
+    <button class="btn btn-primary" id="btnEnvoyerLien">Recevoir un lien de connexion</button>
+  </div>
+
+  <!-- Étape 2 : lien envoyé, en attente -->
+  <div id="etapeAttente" class="hidden">
+    <div class="mark">Vérifie ta boîte mail</div>
+    <div class="sub">Un lien de connexion vient d'être envoyé à <span id="emailAffiche"></span>.<br>Clique dessus pour accéder à ton espace (pense aux spams).</div>
+    <button class="btn btn-secondary" id="btnRecommencer">Changer d'email</button>
+  </div>
+
+  <!-- Étape 3 : connecté, gestion -->
+  <div id="etapeGestion" class="hidden">
+    <div class="mark" id="texteBonjour">Bonjour</div>
+
+    <div style="font-weight:700; font-size:14px; margin: 16px 0 10px;">Mon planning cette semaine</div>
+    <div id="monPlanning" style="margin-bottom: 24px;"></div>
+
+    <div class="sub">Tes prochaines absences déclarées</div>
+    <div id="listeAbsences" style="margin-bottom: 20px;"></div>
+
+    <div style="font-weight:700; font-size:14px; margin-bottom:10px;">Ajouter une nouvelle période</div>
+    <div class="field-row">
+      <div class="field"><label>Du</label><input type="date" id="champDebut"></div>
+      <div class="field"><label>Au</label><input type="date" id="champFin"></div>
+    </div>
+    <button class="btn btn-primary" id="btnAjouter">Ajouter</button>
+    <button class="btn btn-secondary" id="btnTerminer">Terminer et se déconnecter</button>
+  </div>
+
+  <div style="text-align:center; margin-top:20px; font-size:11px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://pljyvybrcjrhmguewrzy.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_lkpGFUjhjG2nHBGbi7uB1w_9FanU5Q_';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let benevoleActuel = null;
+
+  function todayISO() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function formatDate(iso) { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
+  function afficherEtape(id) {
+    ['etapeEmail', 'etapeAttente', 'etapeGestion'].forEach(e => document.getElementById(e).classList.toggle('hidden', e !== id));
+  }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  document.getElementById('btnEnvoyerLien').onclick = async () => {
+    const email = document.getElementById('champEmail').value.trim();
+    const err = document.getElementById('erreurEmail');
+    const btn = document.getElementById('btnEnvoyerLien');
+    err.textContent = '';
+    if (!email) { err.textContent = 'Merci de renseigner ton email.'; return; }
+
+    btn.disabled = true;
+
+    const { data: match } = await sb.from('benevoles')
+      .select('id')
+      .ilike('email', email)
+      .eq('statut', 'actif')
+      .maybeSingle();
+
+    if (!match) {
+      err.textContent = 'Cet email ne correspond à aucune fiche bénévole active. Contacte l\'administrateur pour vérifier ton adresse.';
+      btn.disabled = false;
+      return;
+    }
+
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.href.split('?')[0].split('#')[0] }
+    });
+    btn.disabled = false;
+    if (error) { err.textContent = 'Erreur lors de l\'envoi, réessaie.'; return; }
+
+    document.getElementById('emailAffiche').textContent = email;
+    afficherEtape('etapeAttente');
+  };
+
+  document.getElementById('btnRecommencer').onclick = () => {
+    document.getElementById('champEmail').value = '';
+    afficherEtape('etapeEmail');
+  };
+
+  document.getElementById('btnTerminer').onclick = async () => {
+    await sb.auth.signOut();
+    benevoleActuel = null;
+    afficherEtape('etapeEmail');
+  };
+
+  function lundiDeLaSemaine(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const jourJs = d.getDay();
+    const decalage = jourJs === 0 ? -6 : 1 - jourJs;
+    d.setDate(d.getDate() + decalage);
+    return d.toISOString().slice(0, 10);
+  }
+  function ajouterJoursDate(dateStr, n) {
+    const d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  async function chargerMonPlanning() {
+    const zone = document.getElementById('monPlanning');
+    zone.innerHTML = '<div style="font-size:13px;color:var(--ink-soft);">Chargement…</div>';
+
+    const lundi = lundiDeLaSemaine(todayISO());
+    const vendredi = ajouterJoursDate(lundi, 4);
+
+    const { data, error } = await sb.from('planning')
+      .select('date, destination, postes(nom)')
+      .eq('benevole_id', benevoleActuel.id)
+      .gte('date', lundi).lte('date', vendredi)
+      .order('date', { ascending: true });
+
+    if (error) { zone.innerHTML = '<div style="font-size:13px;color:var(--danger);">Erreur de chargement.</div>'; return; }
+
+    if (!data || data.length === 0) {
+      zone.innerHTML = '<div style="font-size:13px;color:var(--ink-soft);">Aucun planning enregistré pour toi cette semaine.</div>';
+      return;
+    }
+
+    const JOURS_NOMS = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi' };
+    zone.innerHTML = '';
+    data.forEach(r => {
+      const jourSemaine = new Date(r.date + 'T12:00:00').getDay();
+      const badge = r.destination ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:2px 7px;border-radius:6px;">🚚 ${r.destination}</span>` : '';
+      const div = document.createElement('div');
+      div.className = 'conge-item';
+      div.innerHTML = `
+        <div>
+          <div class="who">${JOURS_NOMS[jourSemaine] || ''} ${formatDate(r.date)}</div>
+          <div class="period">${r.postes ? r.postes.nom : ''}${badge}</div>
+        </div>
+      `;
+      zone.appendChild(div);
+    });
+  }
+
+  async function chargerAbsences() {
+    const zone = document.getElementById('listeAbsences');
+    zone.innerHTML = '<div style="font-size:13px;color:var(--ink-soft);">Chargement…</div>';
+
+    const { data, error } = await sb.from('conges')
+      .select('*')
+      .eq('benevole_id', benevoleActuel.id)
+      .gte('fin', todayISO())
+      .order('debut', { ascending: true });
+
+    if (error) { zone.innerHTML = '<div style="font-size:13px;color:var(--danger);">Erreur de chargement.</div>'; return; }
+    if (!data.length) { zone.innerHTML = '<div style="font-size:13px;color:var(--ink-soft);">Aucune absence à venir déclarée.</div>'; return; }
+
+    zone.innerHTML = '';
+    data.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'conge-item';
+      div.innerHTML = `
+        <div>
+          <div class="who">Absence</div>
+          <div class="period">${formatDate(c.debut)} → ${formatDate(c.fin)}</div>
+        </div>
+        <button data-id="${c.id}">Annuler</button>
+      `;
+      div.querySelector('button').onclick = async () => {
+        const { error: delErr } = await sb.from('conges').delete().eq('id', c.id);
+        if (delErr) { alert('Impossible d\'annuler cette période.'); return; }
+        showToast('Période annulée.');
+        await chargerAbsences();
+      };
+      zone.appendChild(div);
+    });
+  }
+
+  document.getElementById('btnAjouter').onclick = async () => {
+    const debut = document.getElementById('champDebut').value;
+    const fin = document.getElementById('champFin').value;
+    if (!debut || !fin) { alert('Merci de renseigner les deux dates.'); return; }
+    if (fin < debut) { alert('La date de fin doit être après la date de début.'); return; }
+
+    const { error } = await sb.from('conges').insert({ benevole_id: benevoleActuel.id, debut, fin, type: 'absence', origine: 'benevole' });
+    if (error) { alert('Erreur lors de l\'enregistrement, réessaie.'); return; }
+
+    document.getElementById('champDebut').value = '';
+    document.getElementById('champFin').value = '';
+    showToast(`Merci ${benevoleActuel.prenom}, c'est noté.`);
+    await chargerAbsences();
+  };
+
+  // Au chargement : si on revient d'un clic sur le lien magique, une session existe déjà
+  async function verifierSession() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { afficherEtape('etapeEmail'); return; }
+
+    await sb.rpc('lier_mon_compte');
+    const { data: match, error } = await sb.from('benevoles')
+      .select('id, prenom, nom, numero')
+      .eq('auth_user_id', session.user.id)
+      .maybeSingle();
+
+    if (error || !match) {
+      document.getElementById('erreurEmail').textContent = 'Cet email ne correspond à aucune fiche bénévole. Contacte l\'administrateur.';
+      await sb.auth.signOut();
+      afficherEtape('etapeEmail');
+      return;
+    }
+
+    benevoleActuel = match;
+    document.getElementById('texteBonjour').textContent = `Bonjour ${match.prenom}`;
+    afficherEtape('etapeGestion');
+    await chargerMonPlanning();
+    await chargerAbsences();
+  }
+
+  verifierSession();
+</script>
+
+</body>
+</html>
