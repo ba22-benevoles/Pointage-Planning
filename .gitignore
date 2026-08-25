@@ -1,0 +1,9 @@
+# Données personnelles réelles — jamais sur Git
+PP_BA22.ods
+*.ods
+ 
+# Exports et scripts d'import contenant des données personnelles réelles
+# (noms, adresses, téléphones, emails en clair dans les INSERT)
+benevoles_import_pret.csv
+import_historique_2026.sql
+
