@@ -16,17 +16,17 @@
 
   /* ===== MODE POINTAGE (kiosque) ===== */
   #kioskView header {
-    padding: 28px 36px 20px; border-bottom: 2px solid var(--line);
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    padding: 14px 28px 12px; border-bottom: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 12px;
   }
-  .brand { display: flex; align-items: baseline; gap: 14px; }
-  .brand .mark { font-family: Georgia, serif; font-size: 30px; font-weight: 700; color: var(--green); }
-  .brand .sub { color: var(--ink-soft); font-size: 15px; }
-  .header-right { display: flex; align-items: center; gap: 16px; }
-  .clock { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; color: var(--green); background: var(--green-soft); padding: 8px 18px; border-radius: 999px; }
-  .admin-entry { font-size: 12px; color: var(--ink-soft); background: none; border: none; cursor: pointer; text-decoration: underline; }
+  .brand { display: flex; align-items: baseline; gap: 10px; flex-shrink: 0; }
+  .brand .mark { font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: var(--green); }
+  .brand .sub { color: var(--ink-soft); font-size: 13px; white-space: nowrap; }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
+  .clock { font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 600; color: var(--green); background: var(--green-soft); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
+  .admin-entry { font-size: 12px; color: var(--ink-soft); background: none; border: none; cursor: pointer; text-decoration: underline; white-space: nowrap; }
 
-  #kioskView main { padding: 24px 36px 60px; max-width: 1100px; margin: 0 auto; }
+  #kioskView main { padding: 16px 36px 40px; max-width: 1100px; margin: 0 auto; }
   .search-row input { width: 100%; padding: 18px 22px; font-size: 20px; border: 2px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); outline: none; }
   .search-row input:focus { border-color: var(--green); }
   .hint { min-height: 20px; font-size: 14px; color: var(--danger); margin-top: 8px; padding-left: 4px; }
@@ -336,6 +336,11 @@
       <div id="congeList"></div>
 
       <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid var(--line);">
+        <div style="font-weight:700; color:var(--ink); margin-bottom:14px;">Vue sur 8 semaines (absences à venir)</div>
+        <div id="vue8SemainesZone"></div>
+      </div>
+
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 2px solid var(--line);">
         <div style="font-weight:700; color:var(--ink); margin-bottom:14px;">Fermetures de la BA (tout le monde, aucun pointage possible)</div>
         <div class="conge-form">
           <div class="field-row" style="align-items: flex-end;">
@@ -420,7 +425,7 @@
         <input type="text" id="searchBilan" placeholder="Rechercher un bénévole…">
       </div>
       <table>
-        <thead><tr><th>N°</th><th>Nom</th><th>Jours présence</th><th>Heures</th><th>Jours congé</th><th>Distance (km)</th><th>Indemnité km</th></tr></thead>
+        <thead><tr><th>N°</th><th>Nom</th><th>Jours présence</th><th>Heures</th><th>Distance (km)</th><th>Indemnité km</th></tr></thead>
         <tbody id="tbodyBilanBenevoles"></tbody>
       </table>
     </div>
@@ -699,7 +704,7 @@
     document.getElementById('kioskView').classList.add('hidden');
     document.getElementById('adminView').classList.add('active');
     await chargerTout();
-    renderBenevoles(); renderCongeSelect(); renderConges();
+    renderBenevoles(); renderCongeSelect(); renderConges(); renderVue8Semaines();
     document.getElementById('paramAnnee').value = new Date().getFullYear();
     document.getElementById('bilanAnnee').value = new Date().getFullYear();
     await chargerParametres();
@@ -1154,6 +1159,7 @@
     if (error) { alert('Erreur : ' + error.message); return; }
     await chargerConges();
     renderConges();
+    renderVue8Semaines();
     showToast('Période ajoutée.');
   };
 
@@ -1175,9 +1181,58 @@
         await sb.from('conges').delete().eq('id', c.id);
         await chargerConges();
         renderConges();
+        renderVue8Semaines();
       };
       zone.appendChild(div);
     });
+  }
+
+  // Vue synthétique : qui est absent, semaine par semaine, sur les 8 prochaines semaines
+  function renderVue8Semaines() {
+    const zone = document.getElementById('vue8SemainesZone');
+    if (!zone) return;
+
+    const lundiCetteSemaine = lundiDeLaSemaine(todayISO());
+    const semaines = [];
+    for (let i = 0; i < 8; i++) {
+      const lundi = ajouterJours(lundiCetteSemaine, i * 7);
+      semaines.push({ lundi, dimanche: ajouterJours(lundi, 6) });
+    }
+    const debutFenetre = semaines[0].lundi;
+    const finFenetre = semaines[7].dimanche;
+
+    const concernes = new Map();
+    conges.forEach(c => {
+      if (c.fin < debutFenetre || c.debut > finFenetre) return;
+      const b = c.benevoles;
+      if (!b) return;
+      if (!concernes.has(c.benevole_id)) {
+        concernes.set(c.benevole_id, { nom: b.nom, prenom: b.prenom, semaines: Array(8).fill(false) });
+      }
+      const entree = concernes.get(c.benevole_id);
+      semaines.forEach((s, idx) => {
+        if (c.debut <= s.dimanche && c.fin >= s.lundi) entree.semaines[idx] = true;
+      });
+    });
+
+    if (concernes.size === 0) {
+      zone.innerHTML = '<div style="color:var(--ink-soft);font-size:14px;">Aucune absence prévue sur les 8 prochaines semaines.</div>';
+      return;
+    }
+
+    let html = '<div style="overflow-x:auto;"><table><thead><tr><th>Bénévole</th>';
+    semaines.forEach(s => { html += `<th style="font-size:11px;">${formatDate(s.lundi)}</th>`; });
+    html += '</tr></thead><tbody>';
+
+    Array.from(concernes.values()).sort((a, b) => a.nom.localeCompare(b.nom)).forEach(entree => {
+      html += `<tr><td>${entree.prenom} ${entree.nom}</td>`;
+      entree.semaines.forEach(absent => {
+        html += `<td style="text-align:center; ${absent ? 'background:var(--amber-soft);' : ''}">${absent ? '🌴' : ''}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    zone.innerHTML = html;
   }
 
   // ====================================================
@@ -1375,7 +1430,7 @@
   async function chargerPlanningExistant(lundi) {
     const vendredi = ajouterJours(lundi, 4);
     const { data, error } = await sb.from('planning')
-      .select('date, poste_id, benevole_id, destination, postes(nom), benevoles(id, nom, prenom, numero)')
+      .select('date, poste_id, benevole_id, destination, accompagnant, postes(nom), benevoles(id, nom, prenom, numero)')
       .gte('date', lundi).lte('date', vendredi);
     if (error) { console.error(error); return null; }
     if (!data || data.length === 0) return null;
@@ -1389,7 +1444,7 @@
       data.filter(r => r.date === dateStr).forEach(r => {
         const posteNom = r.postes ? r.postes.nom : null;
         if (posteNom && assignments[posteNom] && r.benevoles) {
-          assignments[posteNom].push({ id: r.benevole_id, nom: r.benevoles.nom, prenom: r.benevoles.prenom, numero: r.benevoles.numero, destination: r.destination || null });
+          assignments[posteNom].push({ id: r.benevole_id, nom: r.benevoles.nom, prenom: r.benevoles.prenom, numero: r.benevoles.numero, destination: r.destination || null, accompagnant: r.accompagnant || false });
         }
       });
       joursData.push({ dateStr, ...infos, assignments, nonAffectes: [] });
@@ -1407,7 +1462,7 @@
       if (j.ferme) return;
       POSTES_CONFIG.forEach(p => {
         (j.assignments[p.nom] || []).forEach(b => {
-          rows.push({ date: j.dateStr, poste_id: p.id, benevole_id: b.id, valide: true, destination: b.destination || null });
+          rows.push({ date: j.dateStr, poste_id: p.id, benevole_id: b.id, valide: true, destination: b.destination || null, accompagnant: b.accompagnant || false });
         });
       });
     });
@@ -1486,8 +1541,9 @@
           if (j.ferme) { html += `<td style="color:var(--ink-soft);font-style:italic;">${row === 0 ? 'Fermé' : ''}</td>`; return; }
           const b = (j.assignments[p.nom] || [])[row];
           const manque = row < p.min && !b;
-          const badge = (b && b.destination) ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">🚚 ${b.destination}</span>` : '';
-          html += `<td class="${manque ? 'cell-manque' : ''} cell-editable" data-date="${j.dateStr}" data-poste-id="${p.id}" data-poste-nom="${p.nom}" data-row="${row}">${b ? b.prenom + ' ' + b.nom + badge : ''}</td>`;
+          const badgeDest = (b && b.destination) ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">🚚 ${b.destination}</span>` : '';
+          const badgeAccomp = (b && b.accompagnant) ? ` <span style="background:#8A6D3B;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">👤 Accompagnant</span>` : '';
+          html += `<td class="${manque ? 'cell-manque' : ''} cell-editable" data-date="${j.dateStr}" data-poste-id="${p.id}" data-poste-nom="${p.nom}" data-row="${row}">${b ? b.prenom + ' ' + b.nom + badgeDest + badgeAccomp : ''}</td>`;
         });
         html += `</tr>`;
       }
@@ -1577,7 +1633,7 @@
     const select = document.createElement('select');
     select.className = 'cell-edit-select';
     select.innerHTML = '<option value="">— vide —</option>' +
-      benevoles.slice().sort((a, b) => a.nom.localeCompare(b.nom)).map(b =>
+      benevoles.filter(b => b.statut !== 'inactif' && b.statut !== 'longue_absence').slice().sort((a, b) => a.nom.localeCompare(b.nom)).map(b =>
         `<option value="${b.id}" ${actuel && actuel.id === b.id ? 'selected' : ''}>${b.prenom} ${b.nom}</option>`
       ).join('');
 
@@ -1645,6 +1701,26 @@
       label.appendChild(checkbox);
       label.appendChild(document.createTextNode('🚚 Saint-Brieuc'));
       td.appendChild(label);
+
+      const labelAccomp = document.createElement('label');
+      labelAccomp.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:12px;margin-top:4px;cursor:pointer;';
+      const checkboxAccomp = document.createElement('input');
+      checkboxAccomp.type = 'checkbox';
+      checkboxAccomp.checked = actuel.accompagnant === true;
+      checkboxAccomp.onclick = (ev) => ev.stopPropagation();
+      checkboxAccomp.onchange = async () => {
+        actuel.accompagnant = checkboxAccomp.checked;
+        if (planningEstEnregistre) {
+          const posteId = POSTES_CONFIG.find(p => p.nom === posteNom).id;
+          await sb.from('planning').update({ accompagnant: actuel.accompagnant })
+            .eq('date', dateStr).eq('poste_id', posteId).eq('benevole_id', actuel.id);
+          showToast('Planning mis à jour.');
+        }
+        afficherPlanning();
+      };
+      labelAccomp.appendChild(checkboxAccomp);
+      labelAccomp.appendChild(document.createTextNode('👤 Accompagnant (ne conduit pas)'));
+      td.appendChild(labelAccomp);
     }
 
     select.focus();
@@ -1788,28 +1864,33 @@
       return;
     }
 
-    let totalGeneral = totalIK || 0;
+    let totalCoutMainOeuvre = 0;
     let html = '<div class="bilan-cards">';
     (parCategorie || []).forEach(c => {
-      totalGeneral += c.cout_valorise_heures || 0;
+      totalCoutMainOeuvre += c.cout_valorise_heures || 0;
       html += `
         <div class="bilan-card">
           <div class="label">${LABEL_ACTIVITE[c.type_activite] || c.type_activite}</div>
-          <div class="valeur">${(c.cout_valorise_heures || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+          <div class="valeur">${Math.round(c.cout_valorise_heures || 0).toLocaleString('fr-FR')} €</div>
           <div class="sous">${c.nb_benevoles} bénévole${c.nb_benevoles > 1 ? 's' : ''} · ${c.total_heures} h · ${c.taux_horaire ?? '—'} €/h</div>
         </div>`;
     });
     html += `
       <div class="bilan-card">
         <div class="label">Indemnités kilométriques</div>
-        <div class="valeur">${(totalIK || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+        <div class="valeur">${Math.round(totalIK || 0).toLocaleString('fr-FR')} €</div>
         <div class="sous">Toutes catégories confondues</div>
       </div>`;
     html += '</div>';
     html += `
       <div class="bilan-total">
-        <span class="label">Coût total valorisé ${annee}</span>
-        <span class="valeur">${totalGeneral.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</span>
+        <span class="label">Coût de la main d'œuvre valorisée ${annee}</span>
+        <span class="valeur">${Math.round(totalCoutMainOeuvre).toLocaleString('fr-FR')} €</span>
+      </div>`;
+    html += `
+      <div class="bilan-total" style="background:#3E6B8F; margin-top:10px;">
+        <span class="label">Total indemnités kilométriques ${annee}</span>
+        <span class="valeur">${Math.round(totalIK || 0).toLocaleString('fr-FR')} €</span>
       </div>`;
     resumeZone.innerHTML = html;
 
@@ -1830,9 +1911,8 @@
           <td>${b.prenom} ${b.nom}</td>
           <td>${b.nb_jours_presence}</td>
           <td>${b.total_heures} h</td>
-          <td>${b.nb_jours_conge}</td>
           <td>${b.distance_totale_km} km</td>
-          <td>${b.montant_indemnite_km.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</td>
+          <td>${Math.round(b.montant_indemnite_km).toLocaleString('fr-FR')} €</td>
         `;
         tbody.appendChild(tr);
       });

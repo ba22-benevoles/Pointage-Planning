@@ -89,8 +89,9 @@ function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: a
       html += `<tr><td style="border:1px solid #E5DFCF; padding:6px; text-align:center;">${row + 1}</td>`;
       for (let jourIdx = 0; jourIdx < 5; jourIdx++) {
         const b = lignesParJour[jourIdx][row];
-        const badge = (b && b.destination) ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">🚚 ${b.destination}</span>` : '';
-        html += `<td style="border:1px solid #E5DFCF; padding:6px;">${b ? b.prenom + ' ' + b.nom + badge : ''}</td>`;
+        const badgeDest = (b && b.destination) ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">🚚 ${b.destination}</span>` : '';
+        const badgeAccomp = (b && b.accompagnant) ? ` <span style="background:#8A6D3B;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">👤 Accompagnant</span>` : '';
+        html += `<td style="border:1px solid #E5DFCF; padding:6px;">${b ? b.prenom + ' ' + b.nom + badgeDest + badgeAccomp : ''}</td>`;
       }
       html += `</tr>`;
     }
@@ -131,7 +132,7 @@ Deno.serve(async (req) => {
     // 1. Le planning de cette semaine est-il déjà enregistré ?
     const { data: planningRows, error: planningErr } = await sb
       .from('planning')
-      .select('date, poste_id, benevole_id, destination, postes(nom), benevoles(nom, prenom)')
+      .select('date, poste_id, benevole_id, destination, accompagnant, postes(nom), benevoles(nom, prenom)')
       .gte('date', lundi)
       .lte('date', vendredi);
 
@@ -163,7 +164,7 @@ Deno.serve(async (req) => {
       if (!posteNom || !planningParPoste[posteNom]) return;
       const jourIdx = Math.round((new Date(row.date + 'T12:00:00Z').getTime() - new Date(lundi + 'T12:00:00Z').getTime()) / 86400000);
       if (jourIdx < 0 || jourIdx > 4) return;
-      planningParPoste[posteNom][jourIdx].push({ nom: row.benevoles?.nom ?? '', prenom: row.benevoles?.prenom ?? '', destination: row.destination ?? null });
+      planningParPoste[posteNom][jourIdx].push({ nom: row.benevoles?.nom ?? '', prenom: row.benevoles?.prenom ?? '', destination: row.destination ?? null, accompagnant: row.accompagnant ?? false });
     });
 
     const htmlContenu = construireHtmlPlanning(lundi, vendredi, postesConfig || [], planningParPoste);
@@ -173,7 +174,7 @@ Deno.serve(async (req) => {
     let envoyes = 0;
 
     if (emailTest) {
-      await envoyerEmailBrevo({ email: emailTest, prenom: 'Test' }, `[TEST] ${sujet}`, htmlContenu);
+      await envoyerEmailBrevo({ email: emailTest, prenom: 'Test' }, sujet, htmlContenu);
       envoyes = 1;
     } else {
       const { data: destinataires, error: destErr } = await sb

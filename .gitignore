@@ -5,5 +5,10 @@ PP_BA22.ods
 # Exports et scripts d'import contenant des données personnelles réelles
 # (noms, adresses, téléphones, emails en clair dans les INSERT)
 benevoles_import_pret.csv
-import_historique_2026.sql
-
+import_historique_2026*.sql
+correction_le_merrer.sql
+reinjection_salaries.sql
+donn*salari*
+ 
+# État local du CLI Supabase (propre à cette machine, jamais à partager)
+supabase/.temp/
