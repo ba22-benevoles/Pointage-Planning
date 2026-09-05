@@ -64,7 +64,7 @@ async function envoyerEmailBrevo(destinataire: { email: string; prenom: string }
   }
 }
 
-function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: any[], planningParPoste: Record<string, any[][]>): string {
+function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: any[], planningParPoste: Record<string, any[][]>, joursLavage: Set<string>): string {
   let html = `
     <div style="font-family: sans-serif; color: #23261F; max-width: 700px;">
       <h2 style="color: #33513F;">Planning de la semaine du ${formatDateFr(lundi)} au ${formatDateFr(vendredi)}</h2>
@@ -95,6 +95,18 @@ function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: a
       }
       html += `</tr>`;
     }
+
+    // Ligne "Lavage des camions" : simple marqueur par jour, uniquement sous Chauffeur
+    if (poste.nom === 'Chauffeur') {
+      html += `<tr style="background:#F5F2E8;"><td style="border:1px solid #E5DFCF; padding:6px; text-align:center;">🧼</td>`;
+      for (let jourIdx = 0; jourIdx < 5; jourIdx++) {
+        const dateJour = ajouterJours(lundi, jourIdx);
+        const marque = joursLavage.has(dateJour);
+        html += `<td style="border:1px solid #E5DFCF; padding:6px; font-style:italic; ${marque ? 'background:#F5E6C8; font-weight:600;' : ''}">${marque ? 'Lavage' : ''}</td>`;
+      }
+      html += `</tr>`;
+    }
+
     html += `</tbody></table>`;
   }
 
@@ -167,7 +179,10 @@ Deno.serve(async (req) => {
       planningParPoste[posteNom][jourIdx].push({ nom: row.benevoles?.nom ?? '', prenom: row.benevoles?.prenom ?? '', destination: row.destination ?? null, accompagnant: row.accompagnant ?? false });
     });
 
-    const htmlContenu = construireHtmlPlanning(lundi, vendredi, postesConfig || [], planningParPoste);
+    const { data: lavageRows } = await sb.from('lavage_camions').select('date').gte('date', lundi).lte('date', vendredi);
+    const joursLavage = new Set((lavageRows || []).map((r: any) => r.date));
+
+    const htmlContenu = construireHtmlPlanning(lundi, vendredi, postesConfig || [], planningParPoste, joursLavage);
 
     // 3. Envoi : soit à tous les bénévoles/salariés actifs, soit à un seul email de test
     const sujet = `Planning de la semaine du ${formatDateFr(lundi)}`;
