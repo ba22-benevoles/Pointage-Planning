@@ -98,7 +98,7 @@ function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: a
 
     // Ligne "Lavage des camions" : simple marqueur par jour, uniquement sous Chauffeur
     if (poste.nom === 'Chauffeur') {
-      html += `<tr style="background:#F5F2E8;"><td style="border:1px solid #E5DFCF; padding:6px; text-align:center;">🧼</td>`;
+      html += `<tr style="background:#F5F2E8;"><td style="border:1px solid #E5DFCF; padding:6px; text-align:center; font-size:11px;">Lav.</td>`;
       for (let jourIdx = 0; jourIdx < 5; jourIdx++) {
         const dateJour = ajouterJours(lundi, jourIdx);
         const marque = joursLavage.has(dateJour);
@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     });
 
     const { data: lavageRows } = await sb.from('lavage_camions').select('date').gte('date', lundi).lte('date', vendredi);
-    const joursLavage = new Set((lavageRows || []).map((r: any) => r.date));
+    const joursLavage = new Set((lavageRows || []).map((r: any) => String(r.date).slice(0, 10)));
 
     const htmlContenu = construireHtmlPlanning(lundi, vendredi, postesConfig || [], planningParPoste, joursLavage);
 
