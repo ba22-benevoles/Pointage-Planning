@@ -16,7 +16,7 @@
     font-family: 'Public Sans','Segoe UI', system-ui, sans-serif;
     display: flex; align-items: center; justify-content: center; padding: 20px;
   }
-  .box { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 36px 32px; width: 100%; max-width: 440px; }
+  .box { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 36px 32px; width: 100%; max-width: 720px; }
   .mark { font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: var(--green); text-align: center; }
   .sub { color: var(--ink-soft); font-size: 14px; text-align: center; margin: 6px 0 22px; }
   .field { margin-bottom: 14px; }
@@ -66,6 +66,7 @@
 
     <div style="font-weight:700; font-size:14px; margin: 16px 0 10px;">Mon planning cette semaine</div>
     <div id="monPlanning" style="margin-bottom: 24px;"></div>
+    <div id="planningEquipe" style="margin-bottom: 24px;"></div>
 
     <div class="sub">Tes prochaines absences déclarées</div>
     <div id="listeAbsences" style="margin-bottom: 20px;"></div>
@@ -197,6 +198,50 @@
       `;
       zone.appendChild(div);
     });
+
+    // Une fois "Mon planning" connu, on affiche aussi le planning complet
+    // de chaque poste où la personne travaille cette semaine (toute l'équipe).
+    await chargerPlanningEquipe(lundi, vendredi, data);
+  }
+
+  async function chargerPlanningEquipe(lundi, vendredi, mesLignes) {
+    const zone = document.getElementById('planningEquipe');
+    const postesConcernes = [...new Set(mesLignes.map(r => r.postes ? r.postes.nom : null).filter(Boolean))];
+
+    if (postesConcernes.length === 0) { zone.innerHTML = ''; return; }
+
+    const { data, error } = await sb.from('planning')
+      .select('date, poste_id, destination, postes(nom), benevoles(nom, prenom)')
+      .gte('date', lundi).lte('date', vendredi);
+
+    if (error || !data) { zone.innerHTML = ''; return; }
+    const dataFiltree = data.filter(r => r.postes && postesConcernes.includes(r.postes.nom));
+
+    const JOURS_NOMS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+    let html = '<div style="font-weight:700; font-size:14px; margin: 20px 0 10px;">Planning de mon équipe cette semaine</div>';
+
+    postesConcernes.forEach(nomPoste => {
+      const lignesPoste = dataFiltree.filter(r => r.postes.nom === nomPoste);
+      if (!lignesPoste.length) return;
+      html += `<div style="font-weight:600; font-size:13px; color:var(--ink-soft); margin:14px 0 6px;">${nomPoste}</div>`;
+      html += '<div style="overflow-x:auto;"><table style="width:100%; min-width:480px; border-collapse:collapse; font-size:13px;">';
+      html += '<tr>' + JOURS_NOMS.map((j, i) => {
+        const d = ajouterJoursDate(lundi, i);
+        return `<th style="border:1px solid var(--line); padding:5px; background:var(--green-soft); font-size:11px;">${j}<br>${formatDate(d)}</th>`;
+      }).join('') + '</tr>';
+      html += '<tr>' + JOURS_NOMS.map((_, i) => {
+        const d = ajouterJoursDate(lundi, i);
+        const gens = lignesPoste.filter(r => r.date === d);
+        const noms = gens.map(r => {
+          const badge = r.destination ? ` 🚚` : '';
+          return `${r.benevoles ? r.benevoles.prenom + ' ' + r.benevoles.nom : ''}${badge}`;
+        }).join('<br>');
+        return `<td style="border:1px solid var(--line); padding:5px; vertical-align:top;">${noms}</td>`;
+      }).join('') + '</tr>';
+      html += '</table></div>';
+    });
+
+    zone.innerHTML = html;
   }
 
   async function chargerAbsences() {

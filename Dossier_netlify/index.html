@@ -27,8 +27,11 @@
   .admin-entry { font-size: 12px; color: var(--ink-soft); background: none; border: none; cursor: pointer; text-decoration: underline; white-space: nowrap; }
 
   #kioskView main { padding: 16px 36px 40px; max-width: 1100px; margin: 0 auto; }
-  .search-row input { width: 100%; padding: 18px 22px; font-size: 20px; border: 2px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); outline: none; }
+  .search-row input { width: 100%; padding: 18px 50px 18px 22px; font-size: 20px; border: 2px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); outline: none; box-sizing: border-box; }
   .search-row input:focus { border-color: var(--green); }
+  .search-row { position: relative; }
+  #btnClearSearch { display: none; position: absolute; right: 14px; top: 18px; width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--line); color: var(--ink-soft); font-size: 18px; cursor: pointer; line-height: 1; }
+  #btnClearSearch.visible { display: block; }
   .hint { min-height: 20px; font-size: 14px; color: var(--danger); margin-top: 8px; padding-left: 4px; }
   .kiosk-info { font-size: 14px; color: var(--ink-soft); margin-top: 4px; padding-left: 4px; }
   .kiosk-info a { color: var(--green); font-weight: 600; }
@@ -246,6 +249,9 @@
       if (ok) {
         localStorage.setItem('site_unlocked', 'yes');
         gate.style.display = 'none';
+        if (window.location.hash === '#admin') {
+          document.getElementById('btnOpenAdmin').click();
+        }
       } else {
         errZone.textContent = 'Mot de passe incorrect.';
         pwdInput.value = '';
@@ -280,6 +286,7 @@
     <div id="kioskContenu">
       <div class="search-row">
         <input type="text" id="search" placeholder="Nom, ou numéro à 3 chiffres…" autofocus>
+        <button type="button" id="btnClearSearch" title="Effacer">×</button>
         <div class="hint" id="searchHint"></div>
         <div class="kiosk-info" id="kioskInfo"></div>
       </div>
@@ -763,7 +770,7 @@
 
     if (isNumeric && raw.length === 3) {
       const match = benevoles.find(p => p.numero === parseInt(raw, 10));
-      if (match) { openPointageModal(match); search.value = ''; renderKiosk(); return; }
+      if (match) { openPointageModal(match); search.value = ''; clearTimeout(searchIdleTimer); majBoutonEffacer(); renderKiosk(); return; }
       else hint.textContent = `Aucun bénévole avec le numéro ${raw}.`;
     }
 
@@ -771,6 +778,16 @@
     const attendus = actifs.filter(estAttenduAujourdhui);
     const enRechercheOuVoirTous = raw.length > 0 || voirTous;
     const pool = enRechercheOuVoirTous ? actifs : attendus;
+
+    // Quelqu'un qui pointe alors qu'il n'était pas prévu aujourd'hui : on le fait
+    // quand même apparaître (en bas, à part) sur l'écran par défaut, pour qu'il
+    // se retrouve facilement au moment de dépointer, sans devoir rebasculer sur
+    // "voir tous les bénévoles". On exclut les sessions restées ouvertes d'un
+    // jour précédent (ce n'est pas une vraie présence d'aujourd'hui, mais un
+    // oubli à régulariser — déjà géré ailleurs par l'écran "RÉGULARISATION").
+    const presentsNonPrevus = !enRechercheOuVoirTous
+      ? actifs.filter(p => !estAttenduAujourdhui(p) && p.pointageStatus !== 'none' && !p.depuisAutreJour)
+      : [];
 
     const infoZone = document.getElementById('kioskInfo');
     if (!enRechercheOuVoirTous) {
@@ -812,6 +829,10 @@
     if (benevolesListe.length) {
       if (salaries.length) ajouterEnTete('Bénévoles');
       benevolesListe.forEach(ajouterCarte);
+    }
+    if (presentsNonPrevus.length) {
+      ajouterEnTete('Présences non prévues aujourd\'hui');
+      presentsNonPrevus.sort(parNomPrenom).forEach(ajouterCarte);
     }
   }
 
@@ -888,7 +909,37 @@
     renderKiosk();
   };
 
-  search.addEventListener('input', renderKiosk);
+  const btnClearSearch = document.getElementById('btnClearSearch');
+  let searchIdleTimer = null;
+
+  function majBoutonEffacer() {
+    btnClearSearch.classList.toggle('visible', search.value.length > 0);
+  }
+
+  function resetSearchIdleTimer() {
+    clearTimeout(searchIdleTimer);
+    if (search.value.length > 0) {
+      searchIdleTimer = setTimeout(() => {
+        search.value = '';
+        majBoutonEffacer();
+        renderKiosk();
+      }, 8000); // efface tout seul après 8 s d'inactivité
+    }
+  }
+
+  search.addEventListener('input', () => {
+    majBoutonEffacer();
+    resetSearchIdleTimer();
+    renderKiosk();
+  });
+
+  btnClearSearch.onclick = () => {
+    search.value = '';
+    majBoutonEffacer();
+    clearTimeout(searchIdleTimer);
+    renderKiosk();
+    search.focus();
+  };
   function tickClock() { document.getElementById('clock').textContent = nowDateTimeStr(); }
   tickClock(); setInterval(tickClock, 1000 * 10);
 
@@ -896,11 +947,24 @@
   // MODE ADMIN — BÉNÉVOLES (CRUD)
   // ====================================================
   document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.onclick = () => {
+    btn.onclick = async () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('#adminView .view').forEach(v => v.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('view-' + btn.dataset.view).classList.add('active');
+
+      // En arrivant sur Planning, on recharge la liste des bénévoles (statut, jours,
+      // postes) ET les congés, au cas où l'un ou l'autre aurait changé entre-temps
+      // dans un autre onglet.
+      if (btn.dataset.view === 'planning') {
+        await chargerBenevoles();
+        await chargerConges();
+        // Si une semaine était déjà affichée, on la recharge aussi (au cas où un
+        // changement de statut ou un nouveau congé aurait retiré quelqu'un du planning).
+        if (typeof planningLundiActuel !== 'undefined' && planningLundiActuel) {
+          document.getElementById('btnGenererPlanning').click();
+        }
+      }
     };
   });
 
@@ -1454,23 +1518,21 @@
 
   async function enregistrerPlanning(lundi, joursData) {
     const vendredi = ajouterJours(lundi, 4);
-    const { error: delErr } = await sb.from('planning').delete().gte('date', lundi).lte('date', vendredi);
-    if (delErr) { alert('Erreur lors de l\'enregistrement : ' + delErr.message); return false; }
 
     const rows = [];
     joursData.forEach(j => {
       if (j.ferme) return;
       POSTES_CONFIG.forEach(p => {
         (j.assignments[p.nom] || []).forEach(b => {
-          rows.push({ date: j.dateStr, poste_id: p.id, benevole_id: b.id, valide: true, destination: b.destination || null, accompagnant: b.accompagnant || false });
+          rows.push({ date: j.dateStr, poste_id: p.id, benevole_id: b.id, destination: b.destination || null, accompagnant: b.accompagnant || false });
         });
       });
     });
 
-    if (rows.length) {
-      const { error: insErr } = await sb.from('planning').insert(rows);
-      if (insErr) { alert('Erreur lors de l\'enregistrement : ' + insErr.message); return false; }
-    }
+    // Enregistrement atomique (tout ou rien) via une fonction côté serveur —
+    // si quoi que ce soit échoue, rien n'est perdu, l'ancien état reste intact.
+    const { error } = await sb.rpc('enregistrer_planning_semaine', { p_lundi: lundi, p_vendredi: vendredi, p_lignes: rows });
+    if (error) { alert('Erreur lors de l\'enregistrement : ' + error.message); return false; }
     return true;
   }
 
@@ -1500,6 +1562,14 @@
   let planningAffiche = null;
   let planningLundiActuel = null;
   let planningEstEnregistre = false;
+  let lavageCamions = new Set(); // dates (ISO) marquées "lavage" pour la semaine affichée
+
+  async function chargerLavageCamions(lundi) {
+    const vendredi = ajouterJours(lundi, 4);
+    const { data, error } = await sb.from('lavage_camions').select('date').gte('date', lundi).lte('date', vendredi);
+    if (error) { console.error(error); lavageCamions = new Set(); return; }
+    lavageCamions = new Set((data || []).map(r => r.date));
+  }
 
   function afficherPlanning() {
     const lundi = planningLundiActuel;
@@ -1527,8 +1597,18 @@
 
     postesAAfficher.forEach(p => {
       const counts = joursData.map(j => j.ferme ? 0 : (j.assignments[p.nom] || []).length);
-      const maxRows = p.max !== null ? p.max : Math.max(1, ...counts);
+      // Pour un poste sans plafond fixe, on ajoute toujours une ligne vide en plus
+      // du nombre déjà affecté, pour pouvoir en ajouter un(e) de plus à tout moment.
+      const maxRows = p.max !== null ? p.max : Math.max(1, ...counts) + 1;
       const cible = p.max === null ? 'pas de minimum fixe' : (p.min === p.max ? `${p.min} personne${p.min > 1 ? 's' : ''}` : `${p.min} à ${p.max} personnes max`);
+
+      // Tri alphabétique de chaque jour pour ce poste (in-place, garde les mêmes objets
+      // pour que l'édition — qui se base sur l'index de ligne — reste cohérente).
+      joursData.forEach(j => {
+        if (j.assignments[p.nom]) {
+          j.assignments[p.nom].sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
+        }
+      });
 
       html += `<div class="poste-table-wrap">
         <div class="poste-table-title">${p.nom} <span class="poste-table-sub">— ${cible}</span></div>
@@ -1543,10 +1623,34 @@
           const manque = row < p.min && !b;
           const badgeDest = (b && b.destination) ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">🚚 ${b.destination}</span>` : '';
           const badgeAccomp = (b && b.accompagnant) ? ` <span style="background:#8A6D3B;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">👤 Accompagnant</span>` : '';
-          html += `<td class="${manque ? 'cell-manque' : ''} cell-editable" data-date="${j.dateStr}" data-poste-id="${p.id}" data-poste-nom="${p.nom}" data-row="${row}">${b ? b.prenom + ' ' + b.nom + badgeDest + badgeAccomp : ''}</td>`;
+          // Si cette personne apparaît aussi sur un AUTRE poste ce même jour (cas des
+          // salariés/service civique cumulant plusieurs affectations), on le signale.
+          let badgeCumul = '';
+          if (b) {
+            const autresPostes = Object.keys(j.assignments).filter(nomPoste =>
+              nomPoste !== p.nom && (j.assignments[nomPoste] || []).some(x => x && x.id === b.id)
+            );
+            if (autresPostes.length) {
+              badgeCumul = ` <span style="background:#6B4C9A;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">🔀 aussi ${autresPostes.join(', ')}</span>`;
+            }
+          }
+          html += `<td class="${manque ? 'cell-manque' : ''} cell-editable" data-date="${j.dateStr}" data-poste-id="${p.id}" data-poste-nom="${p.nom}" data-row="${row}">${b ? b.prenom + ' ' + b.nom + badgeDest + badgeAccomp + badgeCumul : ''}</td>`;
         });
         html += `</tr>`;
       }
+
+      // Ligne "Lavage des camions" : simple marqueur cliquable jour par jour,
+      // aucune personne précise à choisir — c'est l'équipe du jour qui s'en charge.
+      if (p.nom === 'Chauffeur') {
+        html += `<tr style="background:#F5F2E8;"><td class="row-num" title="Lavage des camions">🧼</td>`;
+        joursData.forEach(j => {
+          if (j.ferme) { html += `<td></td>`; return; }
+          const marque = lavageCamions.has(j.dateStr);
+          html += `<td class="cell-lavage" data-date="${j.dateStr}" style="text-align:center;cursor:pointer;font-style:italic;${marque ? 'background:var(--amber-soft);font-weight:600;' : ''}">${marque ? 'Lavage' : ''}</td>`;
+        });
+        html += `</tr>`;
+      }
+
       html += `</tbody></table></div>`;
     });
 
@@ -1619,6 +1723,22 @@
     if (planningAffiche) afficherPlanning();
   });
 
+  // Clic sur une case "Lavage" : simple bascule, sans choix de personne
+  document.getElementById('planningResult').addEventListener('click', async (e) => {
+    const td = e.target.closest('.cell-lavage');
+    if (!td) return;
+    const dateStr = td.dataset.date;
+    const marque = lavageCamions.has(dateStr);
+    if (marque) {
+      await sb.from('lavage_camions').delete().eq('date', dateStr);
+      lavageCamions.delete(dateStr);
+    } else {
+      await sb.from('lavage_camions').insert({ date: dateStr });
+      lavageCamions.add(dateStr);
+    }
+    afficherPlanning();
+  });
+
   // Clic sur une case = édition (remplacement par n'importe quel bénévole)
   document.getElementById('planningResult').addEventListener('click', (e) => {
     const td = e.target.closest('.cell-editable');
@@ -1632,10 +1752,19 @@
 
     const select = document.createElement('select');
     select.className = 'cell-edit-select';
+
+    const disponibles = benevoles.filter(b => b.statut !== 'inactif' && b.statut !== 'longue_absence')
+      .slice().sort((a, b) => a.nom.localeCompare(b.nom));
+    const qualifies = disponibles.filter(b => (b.postes || []).includes(posteNom));
+    const autres = disponibles.filter(b => !(b.postes || []).includes(posteNom));
+
+    const optionsHtml = (liste) => liste.map(b =>
+      `<option value="${b.id}" ${actuel && actuel.id === b.id ? 'selected' : ''}>${b.prenom} ${b.nom}</option>`
+    ).join('');
+
     select.innerHTML = '<option value="">— vide —</option>' +
-      benevoles.filter(b => b.statut !== 'inactif' && b.statut !== 'longue_absence').slice().sort((a, b) => a.nom.localeCompare(b.nom)).map(b =>
-        `<option value="${b.id}" ${actuel && actuel.id === b.id ? 'selected' : ''}>${b.prenom} ${b.nom}</option>`
-      ).join('');
+      (qualifies.length ? `<optgroup label="Qualifiés pour ${posteNom}">${optionsHtml(qualifies)}</optgroup>` : '') +
+      (autres.length ? `<optgroup label="Autres bénévoles">${optionsHtml(autres)}</optgroup>` : '');
 
     select.onclick = (ev) => ev.stopPropagation();
     select.onchange = async () => {
@@ -1659,9 +1788,49 @@
         }
       }
 
-      // Met à jour la donnée en mémoire
+      // Vérifie si la personne est déjà affectée à un AUTRE poste ce même jour
+      // (sauf pour les salariés, qui peuvent légitimement cumuler plusieurs postes)
+      if (nouveau && nouveau.categorie !== 'salarie') {
+        let autrePosteNom = null, autreRow = -1;
+        for (const nomPoste of Object.keys(jourObj.assignments)) {
+          if (nomPoste === posteNom) continue;
+          const idx = (jourObj.assignments[nomPoste] || []).findIndex(x => x && x.id === nouveau.id);
+          if (idx !== -1) { autrePosteNom = nomPoste; autreRow = idx; break; }
+        }
+        if (autrePosteNom) {
+          const confirmation = confirm(
+            `${nouveau.prenom} ${nouveau.nom} est déjà affecté(e) sur "${autrePosteNom}" ce jour-là.\n\n` +
+            `OK = le/la faire basculer vers "${posteNom}" (retiré(e) de "${autrePosteNom}")\n` +
+            `Annuler = ne rien changer, laisser sur "${autrePosteNom}"`
+          );
+          if (!confirmation) {
+            select.value = actuel ? actuel.id : '';
+            return;
+          }
+          // Retire de l'ancien poste (mémoire + base si déjà enregistré)
+          jourObj.assignments[autrePosteNom].splice(autreRow, 1);
+          if (planningEstEnregistre) {
+            const ancienPosteId = POSTES_CONFIG.find(p => p.nom === autrePosteNom).id;
+            await sb.from('planning').delete().eq('date', dateStr).eq('poste_id', ancienPosteId).eq('benevole_id', nouveau.id);
+          }
+        }
+      }
+
+      // Empêche d'affecter deux fois la même personne sur le même poste/jour
+      if (nouveau) {
+        const dejaPresent = (jourObj.assignments[posteNom] || []).some((x, i) => i !== row && x && x.id === nouveau.id);
+        if (dejaPresent) {
+          alert(`${nouveau.prenom} ${nouveau.nom} est déjà affecté(e) sur ce poste ce jour-là — choisis quelqu'un d'autre.`);
+          select.value = actuel ? actuel.id : '';
+          return;
+        }
+      }
+
+      // Met à jour la donnée en mémoire — on copie l'objet (pas de référence partagée)
+      // pour qu'une case Saint-Brieuc/Accompagnant cochée sur un jour ne se répercute
+      // jamais sur les autres jours où la même personne serait affectée ailleurs.
       const liste = jourObj.assignments[posteNom] || [];
-      if (nouveau) liste[row] = nouveau;
+      if (nouveau) liste[row] = { ...nouveau, destination: null, accompagnant: false };
       else liste.splice(row, 1);
       jourObj.assignments[posteNom] = liste;
 
@@ -1732,6 +1901,7 @@
     const lundi = lundiDeLaSemaine(dateChoisie);
     planningLundiActuel = lundi;
 
+    await chargerLavageCamions(lundi);
     const existant = await chargerPlanningExistant(lundi);
     if (existant) {
       planningAffiche = existant;
@@ -1929,6 +2099,12 @@
   }
 
   chargerTout().then(renderKiosk);
+
+  // Adresse dédiée admin : pointage.esl22.fr/#admin ouvre directement l'espace
+  // admin (une fois le mot de passe du site passé), sans montrer le kiosque.
+  if (document.getElementById('siteGate').style.display === 'none' && window.location.hash === '#admin') {
+    document.getElementById('btnOpenAdmin').click();
+  }
 </script>
 
 </body>
