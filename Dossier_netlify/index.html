@@ -379,11 +379,12 @@
       </div>
       <div id="planningLigneHaut" style="display:flex; align-items:center; gap: 20px; margin-bottom: 16px; flex-wrap: wrap;">
         <div id="planningStatut"></div>
-        <div class="field hidden" id="planningFiltreZone" style="max-width: 240px; margin: 0;">
+        <div class="field hidden" id="planningFiltreZone" style="max-width: 320px; margin: 0;">
           <label>Afficher</label>
           <select id="planningFiltrePoste">
             <option value="">Tous les postes</option>
           </select>
+          <div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">Ce filtre n'affecte que l'écran — l'envoi par email contient toujours tous les postes.</div>
         </div>
       </div>
       <div id="planningResult"></div>
@@ -1642,7 +1643,7 @@
       // Ligne "Lavage des camions" : simple marqueur cliquable jour par jour,
       // aucune personne précise à choisir — c'est l'équipe du jour qui s'en charge.
       if (p.nom === 'Chauffeur') {
-        html += `<tr style="background:#F5F2E8;"><td class="row-num" title="Lavage des camions">🧼</td>`;
+        html += `<tr style="background:#F5F2E8;"><td class="row-num" title="Lavage des camions" style="font-size:11px;">Lav.</td>`;
         joursData.forEach(j => {
           if (j.ferme) { html += `<td></td>`; return; }
           const marque = lavageCamions.has(j.dateStr);
@@ -1690,6 +1691,7 @@
       // Envoi réel à tout le monde : confirmation renforcée, un clic accidentel ne suffit pas
       const saisie = prompt(
         `⚠️ Tu es sur le point d'envoyer ce planning à TOUS les bénévoles/salariés actifs.\n\n${semaineTxt}\n\n` +
+        `Peu importe le filtre "Afficher" à l'écran : l'email contiendra toujours TOUS les postes.\n\n` +
         `Pour confirmer, tape exactement le mot ENVOYER ci-dessous :`
       );
       if (saisie !== 'ENVOYER') {
