@@ -26,7 +26,7 @@
   .clock { font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 600; color: var(--green); background: var(--green-soft); padding: 5px 12px; border-radius: 999px; white-space: nowrap; }
   .admin-entry { font-size: 12px; color: var(--ink-soft); background: none; border: none; cursor: pointer; text-decoration: underline; white-space: nowrap; }
 
-  #kioskView main { padding: 16px 36px 40px; max-width: 1100px; margin: 0 auto; }
+  #kioskView main { padding: 16px 28px 40px; max-width: 1600px; margin: 0 auto; }
   .search-row input { width: 100%; padding: 18px 50px 18px 22px; font-size: 20px; border: 2px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); outline: none; box-sizing: border-box; }
   .search-row input:focus { border-color: var(--green); }
   .search-row { position: relative; }
@@ -36,17 +36,17 @@
   .kiosk-info { font-size: 14px; color: var(--ink-soft); margin-top: 4px; padding-left: 4px; }
   .kiosk-info a { color: var(--green); font-weight: 600; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-top: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-top: 16px; }
   .kiosk-section-header {
     grid-column: 1 / -1;
     font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
     color: var(--ink-soft); padding-top: 10px; margin-top: 4px; border-top: 2px solid var(--line);
   }
   .kiosk-section-header:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; cursor: pointer; text-align: left; font-family: inherit; transition: transform 0.08s ease; min-height: 78px; display: flex; flex-direction: column; justify-content: space-between; }
+  .card { background: var(--panel); border: 2px solid var(--line); border-radius: 10px; padding: 9px 11px; cursor: pointer; text-align: left; font-family: inherit; transition: transform 0.08s ease; min-height: 62px; display: flex; flex-direction: column; justify-content: space-between; }
   .card:active { transform: scale(0.97); }
-  .card .name { font-size: 15px; font-weight: 700; line-height: 1.2; }
-  .numero { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-top: 1px; }
+  .card .name { font-size: 13px; font-weight: 700; line-height: 1.2; }
+  .numero { font-size: 10px; color: var(--ink-soft); font-variant-numeric: tabular-nums; margin-top: 1px; }
   .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px; width: fit-content; margin-top: 6px; }
   .badge .dot { width: 6px; height: 6px; border-radius: 50%; }
   .badge.none { background: #EFEDE4; color: var(--ink-soft); } .badge.none .dot { background: #B7B39F; }
@@ -179,11 +179,11 @@
   .bilan-total { background: var(--green); color: white; border-radius: 14px; padding: 20px 24px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; }
   .bilan-total .label { font-family: Georgia, serif; font-size: 17px; }
   .bilan-total .valeur { font-size: 28px; font-weight: 700; }
-  .jour-header { font-family: Georgia, serif; font-size: 20px; color: var(--green); margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--line); }
+  .jour-header { font-family: Georgia, serif; font-size: 20px; color: var(--green); margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--line); text-align: center; }
   .jour-header:first-child { margin-top: 0; }
 
   .poste-table-wrap { margin-bottom: 30px; }
-  .poste-table-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; color: var(--green); }
+  .poste-table-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; text-align: center; background: var(--green-soft); color: var(--green); padding: 8px 12px; border-radius: 8px; }
   .poste-table-sub { font-weight: 400; font-size: 13px; color: var(--ink-soft); }
   .planning-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 2px solid var(--line); border-radius: 10px; overflow: hidden; }
   .planning-table th, .planning-table td { border: 1px solid var(--line); padding: 9px 10px; font-size: 13px; text-align: center; }
@@ -232,6 +232,14 @@
 
   (function() {
     const gate = document.getElementById('siteGate');
+
+    // Lien direct vers l'admin (#admin) : on saute complètement le mot de passe
+    // du site — l'espace admin a déjà sa propre protection (email + mot de passe).
+    if (window.location.hash === '#admin') {
+      gate.style.display = 'none';
+      return;
+    }
+
     if (localStorage.getItem('site_unlocked') === 'yes') {
       gate.style.display = 'none';
       return;
@@ -249,9 +257,6 @@
       if (ok) {
         localStorage.setItem('site_unlocked', 'yes');
         gate.style.display = 'none';
-        if (window.location.hash === '#admin') {
-          document.getElementById('btnOpenAdmin').click();
-        }
       } else {
         errZone.textContent = 'Mot de passe incorrect.';
         pwdInput.value = '';
@@ -293,7 +298,7 @@
       <div class="grid" id="grid"></div>
     </div>
   </main>
-  <footer style="text-align:center; padding:16px; font-size:12px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor</footer>
+  <footer style="text-align:center; padding:16px; font-size:12px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor · <a href="confidentialite.html" style="color:var(--ink-soft);">Politique de confidentialité</a></footer>
 </div>
 
 <!-- ============ MODE ADMIN ============ -->
@@ -388,12 +393,25 @@
         </div>
       </div>
       <div id="planningResult"></div>
+      <div class="hidden" id="planningMessageZone" style="margin-top: 16px;">
+        <label style="font-size:13px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:4px;">Message à ajouter en haut de l'email (optionnel, ex. un rappel)</label>
+        <textarea id="planningMessageAdmin" rows="2" placeholder="Laisser vide pour ne rien ajouter…" style="width:100%; max-width:600px; padding:10px 12px; font-size:14px; border:2px solid var(--line); border-radius:8px; font-family:inherit; box-sizing:border-box;"></textarea>
+      </div>
       <div style="display:flex; gap:10px; margin-top: 20px; align-items:center; flex-wrap:wrap;">
         <button class="btn-cancel hidden" id="btnRegenererPlanning">Régénérer une proposition</button>
         <button class="btn-save hidden" id="btnEnregistrerPlanning">Enregistrer ce planning</button>
         <button class="btn-primary hidden" id="btnImprimer">Imprimer ce planning</button>
         <input type="email" id="planningEmailTest" placeholder="Email de test (vide = tous les bénévoles)" class="hidden" style="padding:10px 12px; font-size:14px; border:2px solid var(--line); border-radius:8px; min-width:260px;">
         <button class="btn-primary hidden" id="btnEnvoyerPlanning" style="background:#3E6B8F;">✉️ Envoyer</button>
+      </div>
+
+      <div style="margin-top: 32px; padding-top: 20px; border-top: 2px solid var(--line);">
+        <div style="font-weight:700; color:var(--ink); margin-bottom:10px;">Envoyer un message seul (sans le planning)</div>
+        <textarea id="messageSeulTexte" rows="3" placeholder="Ton message aux bénévoles…" style="width:100%; max-width:600px; padding:10px 12px; font-size:14px; border:2px solid var(--line); border-radius:8px; font-family:inherit; box-sizing:border-box;"></textarea>
+        <div style="display:flex; gap:10px; margin-top: 10px; align-items:center; flex-wrap:wrap;">
+          <input type="email" id="messageSeulEmailTest" placeholder="Email de test (vide = tous les bénévoles)" style="padding:10px 12px; font-size:14px; border:2px solid var(--line); border-radius:8px; min-width:260px;">
+          <button class="btn-primary" id="btnEnvoyerMessageSeul" style="background:#3E6B8F;">✉️ Envoyer ce message</button>
+        </div>
       </div>
     </div>
 
@@ -417,6 +435,17 @@
         <thead><tr><th>Année</th><th>Direction</th><th>Cadre</th><th>Agent</th><th>Autre</th><th>IK (€/km)</th></tr></thead>
         <tbody id="tbodyParametres"></tbody>
       </table>
+
+      <div style="font-weight:700; color:var(--ink); margin: 32px 0 14px;">Seuils d'alerte par poste</div>
+      <p style="color:var(--ink-soft); font-size:13px; margin-bottom:14px;">
+        Si un poste tombe à ce seuil (ou moins) suite à un désistement après validation du planning,
+        un email d'alerte est envoyé automatiquement à tous les bénévoles qualifiés sur ce poste.
+        Laisser vide pour désactiver l'alerte sur ce poste.
+      </p>
+      <table>
+        <thead><tr><th>Poste</th><th>Min</th><th>Max</th><th>Seuil d'alerte</th></tr></thead>
+        <tbody id="tbodySeuils"></tbody>
+      </table>
     </div>
 
     <div class="view" id="view-bilans">
@@ -438,7 +467,7 @@
       </table>
     </div>
   </main>
-  <footer style="text-align:center; padding:16px; font-size:12px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor</footer>
+  <footer style="text-align:center; padding:16px; font-size:12px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor · <a href="confidentialite.html" style="color:var(--ink-soft);">Politique de confidentialité</a></footer>
 </div>
 
 <!-- Modal fiche bénévole (mode admin) -->
@@ -468,6 +497,14 @@
         <label>Date de départ (si inactif)</label>
         <input type="date" id="fDateDepart">
         <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Les données identifiantes sont anonymisées automatiquement au 1er mars suivant (le temps de préparer le CERFA). Les heures/présences restent conservées pour les bilans passés.</div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
+          <input type="checkbox" id="fPointageDistance" style="width:auto;">
+          Autorisé à pointer à distance (bénévole pouvant agir à distance, en plus ou à la place d'une présence à la BA)
+        </label>
       </div>
     </div>
     <div class="field-row">
@@ -592,16 +629,72 @@
     const { data, error } = await sb.from('postes').select('*').order('id');
     if (error) { console.error(error); return; }
     POSTES = data.map(p => p.nom);
-    POSTES_CONFIG = data.map(p => ({ id: p.id, nom: p.nom, min: p.effectif_min, max: p.effectif_max }));
+    POSTES_CONFIG = data.map(p => ({ id: p.id, nom: p.nom, min: p.effectif_min, max: p.effectif_max, seuil_alerte: p.seuil_alerte }));
 
     const filtre = document.getElementById('planningFiltrePoste');
     filtre.innerHTML = '<option value="">Tous les postes</option>' +
       POSTES_CONFIG.map(p => `<option value="${p.nom}">${p.nom}</option>`).join('');
+
+    renderSeuilsAlerte();
+  }
+
+  function renderSeuilsAlerte() {
+    const tbody = document.getElementById('tbodySeuils');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    POSTES_CONFIG.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.nom}</td>
+        <td>${p.min}</td>
+        <td></td>
+        <td></td>
+      `;
+      const tds = tr.querySelectorAll('td');
+      const tdMax = tds[2];
+      const tdSeuil = tds[3];
+
+      // Champ Max, éditable — c'est lui qui fixe combien de lignes le poste
+      // affiche dans le planning (POSTES_CONFIG.max).
+      const inputMax = document.createElement('input');
+      inputMax.type = 'number';
+      inputMax.min = String(p.min);
+      inputMax.placeholder = 'illimité';
+      inputMax.style.width = '90px';
+      inputMax.value = p.max ?? '';
+      inputMax.onchange = async () => {
+        const val = inputMax.value === '' ? null : parseInt(inputMax.value, 10);
+        if (val !== null && val < p.min) { alert('Le max ne peut pas être inférieur au min (' + p.min + ').'); inputMax.value = p.max ?? ''; return; }
+        const { error } = await sb.from('postes').update({ effectif_max: val }).eq('id', p.id);
+        if (error) { alert('Erreur : ' + error.message); return; }
+        p.max = val;
+        showToast(`Effectif max mis à jour pour ${p.nom}.`);
+      };
+      tdMax.appendChild(inputMax);
+
+      // Champ Seuil d'alerte, éditable
+      const inputSeuil = document.createElement('input');
+      inputSeuil.type = 'number';
+      inputSeuil.min = '0';
+      inputSeuil.placeholder = 'désactivé';
+      inputSeuil.style.width = '90px';
+      inputSeuil.value = p.seuil_alerte ?? '';
+      inputSeuil.onchange = async () => {
+        const val = inputSeuil.value === '' ? null : parseInt(inputSeuil.value, 10);
+        const { error } = await sb.from('postes').update({ seuil_alerte: val }).eq('id', p.id);
+        if (error) { alert('Erreur : ' + error.message); return; }
+        p.seuil_alerte = val;
+        showToast(`Seuil d'alerte mis à jour pour ${p.nom}.`);
+      };
+      tdSeuil.appendChild(inputSeuil);
+
+      tbody.appendChild(tr);
+    });
   }
 
   async function chargerBenevoles() {
     const { data, error } = await sb.from('benevoles').select(`
-      id, numero, nom, prenom, statut, categorie, distance_km, rue, code_postal, ville, telephone, email, date_depart, nb_presences, type_activite,
+      id, numero, nom, prenom, statut, categorie, distance_km, rue, code_postal, ville, telephone, email, date_depart, pointage_distance, nb_presences, type_activite,
       benevole_postes ( postes ( nom ) ),
       disponibilites ( jour_semaine )
     `);
@@ -660,6 +753,7 @@
   async function chargerConges() {
     const { data, error } = await sb.from('conges')
       .select('*, benevoles ( nom, prenom )')
+      .gte('fin', todayISO())
       .order('debut', { ascending: false });
     if (error) { console.error(error); return; }
     conges = data;
@@ -748,7 +842,7 @@
   function badge(p) {
     if (p.pointageStatus === 'present') {
       if (p.depuisAutreJour) return `<span class="badge" style="background:var(--danger-soft);color:var(--danger);"><span class="dot" style="background:var(--danger);"></span>Session ouverte depuis le ${formatDate(p.dateSession)} !</span>`;
-      return `<span class="badge present"><span class="dot"></span>Présent depuis ${p.since}</span>`;
+      return `<span class="badge present"><span class="dot"></span>Présent</span>`;
     }
     if (p.pointageStatus === 'done') return `<span class="badge done"><span class="dot"></span>Terminé aujourd'hui</span>`;
     return `<span class="badge none"><span class="dot"></span>Non pointé</span>`;
@@ -1090,6 +1184,7 @@
     document.getElementById('fTelephone').value = b ? (b.telephone || '') : '';
     document.getElementById('fEmail').value = b ? (b.email || '') : '';
     document.getElementById('fDateDepart').value = b ? (b.date_depart || '') : '';
+    document.getElementById('fPointageDistance').checked = b ? (b.pointage_distance || false) : false;
     document.getElementById('fTypeActivite').value = b ? (b.type_activite || '') : '';
 
     const checksZone = document.getElementById('checksPostes');
@@ -1141,6 +1236,7 @@
       telephone: document.getElementById('fTelephone').value.trim(),
       email: document.getElementById('fEmail').value.trim(),
       date_depart: document.getElementById('fDateDepart').value || null,
+      pointage_distance: document.getElementById('fPointageDistance').checked,
       type_activite: document.getElementById('fTypeActivite').value || null
     };
 
@@ -1537,6 +1633,14 @@
     return true;
   }
 
+  // Numéro de semaine, norme ISO 8601 (celle utilisée en France)
+  function numeroSemaine(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const debutAnnee = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil(((d - debutAnnee) / 86400000 + 1) / 7);
+  }
+
   function lundiDeLaSemaine(dateStr) {
     const d = new Date(dateStr + 'T12:00:00');
     const jourJs = d.getDay();
@@ -1582,7 +1686,7 @@
       ? `<span class="planning-statut-badge enregistre">✓ Planning enregistré — clique un nom pour le remplacer</span>`
       : `<span class="planning-statut-badge proposition">⚠ Proposition non enregistrée — clique « Enregistrer ce planning » pour la valider</span>`;
 
-    let html = `<div class="jour-header">Semaine du ${formatDate(lundi)} au ${formatDate(ajouterJours(lundi, 4))}</div>`;
+    let html = `<div class="jour-header">Semaine ${numeroSemaine(lundi)} — du ${formatDate(lundi)} au ${formatDate(ajouterJours(lundi, 4))}</div>`;
 
     const joursFermes = joursData.filter(j => j.ferme);
     if (joursFermes.length) {
@@ -1677,6 +1781,7 @@
     document.getElementById('planningFiltreZone').classList.remove('hidden');
     document.getElementById('btnEnvoyerPlanning').classList.toggle('hidden', !planningEstEnregistre);
     document.getElementById('planningEmailTest').classList.toggle('hidden', !planningEstEnregistre);
+    document.getElementById('planningMessageZone').classList.toggle('hidden', !planningEstEnregistre);
   }
 
   document.getElementById('btnEnvoyerPlanning').onclick = async () => {
@@ -1704,8 +1809,10 @@
     btn.disabled = true;
     btn.textContent = 'Envoi en cours…';
 
+    const messageAdmin = document.getElementById('planningMessageAdmin').value.trim();
+
     const { data, error } = await sb.functions.invoke('envoyer-planning-hebdo', {
-      body: { lundi: planningLundiActuel, emailTest: emailTest || null }
+      body: { lundi: planningLundiActuel, emailTest: emailTest || null, messageAdmin: messageAdmin || null }
     });
 
     btn.disabled = false;
@@ -1716,6 +1823,49 @@
       showToast(emailTest ? `Email de test envoyé à ${emailTest}.` : `Planning envoyé à ${data.destinataires} destinataire(s).`);
     } else if (data && data.status === 'aucun_planning') {
       alert('Aucun planning enregistré pour cette semaine — rien n\'a été envoyé.');
+    } else {
+      alert('Résultat inattendu : ' + JSON.stringify(data));
+    }
+  };
+
+  document.getElementById('btnEnvoyerMessageSeul').onclick = async () => {
+    const texte = document.getElementById('messageSeulTexte').value.trim();
+    if (!texte) { alert('Le message est vide.'); return; }
+    const emailTest = document.getElementById('messageSeulEmailTest').value.trim();
+
+    if (emailTest) {
+      if (!confirm(`Envoyer ce message UNIQUEMENT à titre de test à : ${emailTest}\n\n(personne d'autre ne recevra rien)`)) return;
+    } else {
+      const saisie = prompt(
+        `⚠️ Tu es sur le point d'envoyer ce message à TOUS les bénévoles/salariés actifs (sans planning).\n\n` +
+        `Pour confirmer, tape exactement le mot ENVOYER ci-dessous :`
+      );
+      if (saisie !== 'ENVOYER') {
+        if (saisie !== null) alert('Envoi annulé : le mot tapé ne correspond pas exactement à "ENVOYER".');
+        return;
+      }
+    }
+
+    const btn = document.getElementById('btnEnvoyerMessageSeul');
+    btn.disabled = true;
+    btn.textContent = 'Envoi en cours…';
+
+    // "lundi" n'est pas utilisé dans ce mode, mais reste requis pour que la
+    // fonction reconnaisse un déclenchement manuel — on utilise la semaine
+    // affichée si elle existe, sinon le lundi de la semaine en cours.
+    const lundiPourRequete = planningLundiActuel || lundiDeLaSemaine(todayISO());
+
+    const { data, error } = await sb.functions.invoke('envoyer-planning-hebdo', {
+      body: { lundi: lundiPourRequete, emailTest: emailTest || null, messageAdmin: texte, sansPlanning: true }
+    });
+
+    btn.disabled = false;
+    btn.textContent = '✉️ Envoyer ce message';
+
+    if (error) { alert('Erreur lors de l\'envoi : ' + error.message); return; }
+    if (data && data.status === 'message_envoye') {
+      showToast(emailTest ? `Email de test envoyé à ${emailTest}.` : `Message envoyé à ${data.destinataires} destinataire(s).`);
+      document.getElementById('messageSeulTexte').value = '';
     } else {
       alert('Résultat inattendu : ' + JSON.stringify(data));
     }
