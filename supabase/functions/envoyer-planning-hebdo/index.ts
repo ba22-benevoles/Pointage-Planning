@@ -29,6 +29,14 @@ function formatDateFr(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+// Numéro de semaine, norme ISO 8601 (celle utilisée en France)
+function numeroSemaine(iso: string): number {
+  const d = new Date(iso + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const debutAnnee = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - debutAnnee.getTime()) / 86400000 + 1) / 7);
+}
+
 function ajouterJours(iso: string, n: number): string {
   const d = new Date(iso + 'T12:00:00Z');
   d.setUTCDate(d.getUTCDate() + n);
@@ -64,18 +72,25 @@ async function envoyerEmailBrevo(destinataire: { email: string; prenom: string }
   }
 }
 
-function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: any[], planningParPoste: Record<string, any[][]>, joursLavage: Set<string>): string {
+function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: any[], planningParPoste: Record<string, any[][]>, joursLavage: Set<string>, messageAdmin: string | null): string {
   let html = `
     <div style="font-family: sans-serif; color: #23261F; max-width: 700px;">
-      <h2 style="color: #33513F;">Planning de la semaine du ${formatDateFr(lundi)} au ${formatDateFr(vendredi)}</h2>
+      <h2 style="color: #33513F; text-align: center;">Semaine ${numeroSemaine(lundi)} — du ${formatDateFr(lundi)} au ${formatDateFr(vendredi)}</h2>
   `;
+
+  if (messageAdmin && messageAdmin.trim()) {
+    html += `
+      <div style="background:#FBEAE4; border-left:4px solid #B4462F; padding:12px 16px; margin-bottom:20px; white-space:pre-wrap;">
+        ${messageAdmin.trim()}
+      </div>`;
+  }
 
   for (const poste of postesConfig) {
     const lignesParJour = planningParPoste[poste.nom] || [[], [], [], [], []];
     const maxRows = Math.max(1, ...lignesParJour.map((j: any[]) => j.length));
 
     html += `
-      <h3 style="color: #33513F; margin-top: 24px; margin-bottom: 6px;">${poste.nom}</h3>
+      <h3 style="color: #33513F; text-align: center; background: #E4EBE3; padding: 8px 12px; border-radius: 8px; margin-top: 24px; margin-bottom: 6px;">${poste.nom}</h3>
       <table style="border-collapse: collapse; width: 100%; font-size: 13px;">
         <thead>
           <tr>
@@ -98,7 +113,7 @@ function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: a
 
     // Ligne "Lavage des camions" : simple marqueur par jour, uniquement sous Chauffeur
     if (poste.nom === 'Chauffeur') {
-      html += `<tr style="background:#F5F2E8;"><td style="border:1px solid #E5DFCF; padding:6px; text-align:center; font-size:11px;">Lav.</td>`;
+      html += `<tr style="background:#F5F2E8;"><td style="border:1px solid #E5DFCF; padding:6px; text-align:center;">🧼</td>`;
       for (let jourIdx = 0; jourIdx < 5; jourIdx++) {
         const dateJour = ajouterJours(lundi, jourIdx);
         const marque = joursLavage.has(dateJour);
@@ -110,7 +125,12 @@ function construireHtmlPlanning(lundi: string, vendredi: string, postesConfig: a
     html += `</tbody></table>`;
   }
 
-  html += `<p style="color:#6B6A5E; font-size:13px; margin-top:24px;">Banque Alimentaire de Lannion — Pointage BA22</p></div>`;
+  html += `
+    <p style="color:#6B6A5E; font-size:13px; margin-top:24px;">
+      Pour déclarer une absence à venir ou consulter ton planning à tout moment :<br>
+      <a href="https://pointage.esl22.fr/absence.html" style="color:#33513F;">https://pointage.esl22.fr/absence.html</a>
+    </p>
+    <p style="color:#6B6A5E; font-size:13px;">Banque Alimentaire de Lannion — Pointage BA22</p></div>`;
   return html;
 }
 
@@ -127,18 +147,61 @@ Deno.serve(async (req) => {
     let lundi: string;
     let declenchementManuel = false;
     let emailTest: string | null = null;
+    let messageAdmin: string | null = null;
+    let sansPlanning = false;
     try {
       const body = await req.json();
       if (body && body.lundi) {
         lundi = body.lundi;
         declenchementManuel = true;
         emailTest = body.emailTest || null;
+        messageAdmin = body.messageAdmin || null;
+        sansPlanning = body.sansPlanning === true;
       } else {
         lundi = prochainLundi();
       }
     } catch (_) {
       lundi = prochainLundi();
     }
+
+    // Mode "message seul" : aucun planning à construire ni à vérifier,
+    // juste le message envoyé tel quel à la liste de destinataires habituelle.
+    if (sansPlanning) {
+      if (!messageAdmin || !messageAdmin.trim()) {
+        return new Response(JSON.stringify({ status: 'erreur', message: 'Message vide.' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const htmlMessage = `
+        <div style="font-family: sans-serif; color: #23261F; max-width: 700px;">
+          <div style="white-space:pre-wrap;">${messageAdmin.trim()}</div>
+          <p style="color:#6B6A5E; font-size:13px; margin-top:24px;">
+            Pour déclarer une absence à venir ou consulter ton planning à tout moment :<br>
+            <a href="https://pointage.esl22.fr/absence.html" style="color:#33513F;">https://pointage.esl22.fr/absence.html</a>
+          </p>
+          <p style="color:#6B6A5E; font-size:13px;">Banque Alimentaire de Lannion — Pointage BA22</p>
+        </div>`;
+      const sujetMessage = 'Message de la Banque Alimentaire';
+
+      let envoyesMsg = 0;
+      if (emailTest) {
+        await envoyerEmailBrevo({ email: emailTest, prenom: 'Test' }, sujetMessage, htmlMessage);
+        envoyesMsg = 1;
+      } else {
+        const { data: destinatairesMsg, error: destErrMsg } = await sb
+          .from('benevoles').select('email, prenom').eq('statut', 'actif').not('email', 'is', null);
+        if (destErrMsg) throw destErrMsg;
+        for (const dest of destinatairesMsg || []) {
+          if (!dest.email) continue;
+          await envoyerEmailBrevo(dest, sujetMessage, htmlMessage);
+          envoyesMsg++;
+        }
+      }
+      return new Response(JSON.stringify({ status: 'message_envoye', destinataires: envoyesMsg }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const vendredi = ajouterJours(lundi, 4);
 
     // 1. Le planning de cette semaine est-il déjà enregistré ?
@@ -180,9 +243,9 @@ Deno.serve(async (req) => {
     });
 
     const { data: lavageRows } = await sb.from('lavage_camions').select('date').gte('date', lundi).lte('date', vendredi);
-    const joursLavage = new Set((lavageRows || []).map((r: any) => String(r.date).slice(0, 10)));
+    const joursLavage = new Set((lavageRows || []).map((r: any) => r.date));
 
-    const htmlContenu = construireHtmlPlanning(lundi, vendredi, postesConfig || [], planningParPoste, joursLavage);
+    const htmlContenu = construireHtmlPlanning(lundi, vendredi, postesConfig || [], planningParPoste, joursLavage, messageAdmin);
 
     // 3. Envoi : soit à tous les bénévoles/salariés actifs, soit à un seul email de test
     const sujet = `Planning de la semaine du ${formatDateFr(lundi)}`;

@@ -64,7 +64,14 @@
   <div id="etapeGestion" class="hidden">
     <div class="mark" id="texteBonjour">Bonjour</div>
 
-    <div style="font-weight:700; font-size:14px; margin: 16px 0 10px;">Mon planning cette semaine</div>
+    <div id="pointageDistanceZone" class="hidden" style="margin: 16px 0 24px; padding: 16px; background: var(--green-soft); border-radius: 12px;">
+      <div style="font-weight:700; font-size:14px; margin-bottom:8px;">Pointage à distance</div>
+      <div id="pointageDistanceStatut" style="font-size:13px; margin-bottom:10px; color:var(--ink-soft);"></div>
+      <button class="btn btn-primary hidden" id="btnPointerArrivee">Pointer mon arrivée</button>
+      <button class="btn btn-primary hidden" id="btnPointerDepart">Pointer mon départ</button>
+    </div>
+
+    <div style="font-weight:700; font-size:14px; margin: 16px 0 10px;">Mon planning</div>
     <div id="monPlanning" style="margin-bottom: 24px;"></div>
     <div id="planningEquipe" style="margin-bottom: 24px;"></div>
 
@@ -80,7 +87,7 @@
     <button class="btn btn-secondary" id="btnTerminer">Terminer et se déconnecter</button>
   </div>
 
-  <div style="text-align:center; margin-top:20px; font-size:11px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor</div>
+  <div style="text-align:center; margin-top:20px; font-size:11px; color:var(--ink-soft);">© 2026 Banque Alimentaire des Côtes d'Armor · <a href="confidentialite.html" style="color:var(--ink-soft);">Politique de confidentialité</a></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -167,64 +174,63 @@
     const zone = document.getElementById('monPlanning');
     zone.innerHTML = '<div style="font-size:13px;color:var(--ink-soft);">Chargement…</div>';
 
-    const lundi = lundiDeLaSemaine(todayISO());
-    const vendredi = ajouterJoursDate(lundi, 4);
+    const lundiActuel = lundiDeLaSemaine(todayISO());
+    const lundiSuivant = ajouterJoursDate(lundiActuel, 7);
+    const finFenetre = ajouterJoursDate(lundiSuivant, 4);
 
     const { data, error } = await sb.from('planning')
       .select('date, destination, postes(nom)')
       .eq('benevole_id', benevoleActuel.id)
-      .gte('date', lundi).lte('date', vendredi)
+      .gte('date', lundiActuel).lte('date', finFenetre)
       .order('date', { ascending: true });
 
     if (error) { zone.innerHTML = '<div style="font-size:13px;color:var(--danger);">Erreur de chargement.</div>'; return; }
 
-    if (!data || data.length === 0) {
-      zone.innerHTML = '<div style="font-size:13px;color:var(--ink-soft);">Aucun planning enregistré pour toi cette semaine.</div>';
-      return;
+    const JOURS_NOMS = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi' };
+
+    function construireListe(lignes) {
+      if (!lignes.length) return '<div style="font-size:13px;color:var(--ink-soft);">Aucun planning enregistré.</div>';
+      return lignes.map(r => {
+        const jourSemaine = new Date(r.date + 'T12:00:00').getDay();
+        const badge = r.destination ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:2px 7px;border-radius:6px;">🚚 ${r.destination}</span>` : '';
+        return `<div class="conge-item"><div><div class="who">${JOURS_NOMS[jourSemaine] || ''} ${formatDate(r.date)}</div><div class="period">${r.postes ? r.postes.nom : ''}${badge}</div></div></div>`;
+      }).join('');
     }
 
-    const JOURS_NOMS = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi' };
-    zone.innerHTML = '';
-    data.forEach(r => {
-      const jourSemaine = new Date(r.date + 'T12:00:00').getDay();
-      const badge = r.destination ? ` <span style="background:#3E6B8F;color:white;font-size:11px;padding:2px 7px;border-radius:6px;">🚚 ${r.destination}</span>` : '';
-      const div = document.createElement('div');
-      div.className = 'conge-item';
-      div.innerHTML = `
-        <div>
-          <div class="who">${JOURS_NOMS[jourSemaine] || ''} ${formatDate(r.date)}</div>
-          <div class="period">${r.postes ? r.postes.nom : ''}${badge}</div>
-        </div>
-      `;
-      zone.appendChild(div);
-    });
+    const finActuelle = ajouterJoursDate(lundiActuel, 4);
+    const ligneActuelle = (data || []).filter(r => r.date >= lundiActuel && r.date <= finActuelle);
+    const ligneSuivante = (data || []).filter(r => r.date >= lundiSuivant && r.date <= finFenetre);
+
+    zone.innerHTML =
+      '<div style="font-weight:700; font-size:13px; color:var(--ink-soft); margin-bottom:6px;">Cette semaine</div>' +
+      construireListe(ligneActuelle) +
+      '<div style="font-weight:700; font-size:13px; color:var(--ink-soft); margin:16px 0 6px;">Semaine prochaine</div>' +
+      construireListe(ligneSuivante);
 
     // Une fois "Mon planning" connu, on affiche aussi le planning complet
-    // de chaque poste où la personne travaille cette semaine (toute l'équipe).
-    await chargerPlanningEquipe(lundi, vendredi, data);
+    // de chaque poste où la personne travaille (toute l'équipe), sur les
+    // deux semaines.
+    await chargerPlanningEquipe(lundiActuel, lundiSuivant, data || []);
   }
 
-  async function chargerPlanningEquipe(lundi, vendredi, mesLignes) {
+  async function chargerPlanningEquipe(lundiActuel, lundiSuivant, mesLignes) {
     const zone = document.getElementById('planningEquipe');
     const postesConcernes = [...new Set(mesLignes.map(r => r.postes ? r.postes.nom : null).filter(Boolean))];
 
     if (postesConcernes.length === 0) { zone.innerHTML = ''; return; }
 
+    const finFenetre = ajouterJoursDate(lundiSuivant, 4);
     const { data, error } = await sb.from('planning')
       .select('date, poste_id, destination, postes(nom), benevoles(nom, prenom)')
-      .gte('date', lundi).lte('date', vendredi);
+      .gte('date', lundiActuel).lte('date', finFenetre);
 
     if (error || !data) { zone.innerHTML = ''; return; }
     const dataFiltree = data.filter(r => r.postes && postesConcernes.includes(r.postes.nom));
 
     const JOURS_NOMS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
-    let html = '<div style="font-weight:700; font-size:14px; margin: 20px 0 10px;">Planning de mon équipe cette semaine</div>';
 
-    postesConcernes.forEach(nomPoste => {
-      const lignesPoste = dataFiltree.filter(r => r.postes.nom === nomPoste);
-      if (!lignesPoste.length) return;
-      html += `<div style="font-weight:600; font-size:13px; color:var(--ink-soft); margin:14px 0 6px;">${nomPoste}</div>`;
-      html += '<div style="overflow-x:auto;"><table style="width:100%; min-width:480px; border-collapse:collapse; font-size:13px;">';
+    function construireTableau(lundi, lignesPoste) {
+      let html = '<div style="overflow-x:auto;"><table style="width:100%; min-width:480px; border-collapse:collapse; font-size:13px;">';
       html += '<tr>' + JOURS_NOMS.map((j, i) => {
         const d = ajouterJoursDate(lundi, i);
         return `<th style="border:1px solid var(--line); padding:5px; background:var(--green-soft); font-size:11px;">${j}<br>${formatDate(d)}</th>`;
@@ -239,6 +245,25 @@
         return `<td style="border:1px solid var(--line); padding:5px; vertical-align:top;">${noms}</td>`;
       }).join('') + '</tr>';
       html += '</table></div>';
+      return html;
+    }
+
+    let html = '<div style="font-weight:700; font-size:14px; margin: 20px 0 10px;">Planning de mon équipe</div>';
+
+    postesConcernes.forEach(nomPoste => {
+      const lignesPosteTotal = dataFiltree.filter(r => r.postes.nom === nomPoste);
+      if (!lignesPosteTotal.length) return;
+
+      html += `<div style="font-weight:600; font-size:13px; color:var(--ink-soft); margin:14px 0 6px;">${nomPoste}</div>`;
+
+      const finActuelle = ajouterJoursDate(lundiActuel, 4);
+      const lignesActuelle = lignesPosteTotal.filter(r => r.date >= lundiActuel && r.date <= finActuelle);
+      html += '<div style="font-size:12px;color:var(--ink-soft);margin-bottom:4px;">Cette semaine</div>';
+      html += construireTableau(lundiActuel, lignesActuelle);
+
+      const lignesSuivante = lignesPosteTotal.filter(r => r.date >= lundiSuivant && r.date <= finFenetre);
+      html += '<div style="font-size:12px;color:var(--ink-soft);margin:10px 0 4px;">Semaine prochaine</div>';
+      html += construireTableau(lundiSuivant, lignesSuivante);
     });
 
     zone.innerHTML = html;
@@ -300,7 +325,7 @@
 
     await sb.rpc('lier_mon_compte');
     const { data: match, error } = await sb.from('benevoles')
-      .select('id, prenom, nom, numero')
+      .select('id, prenom, nom, numero, pointage_distance')
       .eq('auth_user_id', session.user.id)
       .maybeSingle();
 
@@ -314,9 +339,58 @@
     benevoleActuel = match;
     document.getElementById('texteBonjour').textContent = `Bonjour ${match.prenom}`;
     afficherEtape('etapeGestion');
+    await verifierPointageDistance();
     await chargerMonPlanning();
     await chargerAbsences();
   }
+
+  async function verifierPointageDistance() {
+    if (!benevoleActuel.pointage_distance) return;
+    document.getElementById('pointageDistanceZone').classList.remove('hidden');
+
+    const { data: ouvert } = await sb.from('pointages')
+      .select('id, heure_arrivee, date')
+      .eq('benevole_id', benevoleActuel.id)
+      .is('heure_depart', null)
+      .eq('type', 'presence')
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle();
+
+    const statutZone = document.getElementById('pointageDistanceStatut');
+    const btnArrivee = document.getElementById('btnPointerArrivee');
+    const btnDepart = document.getElementById('btnPointerDepart');
+
+    if (ouvert) {
+      statutZone.textContent = `Présent depuis le ${formatDate(ouvert.date)} (arrivée ${ouvert.heure_arrivee ? ouvert.heure_arrivee.slice(0, 5) : ''})`;
+      btnArrivee.classList.add('hidden');
+      btnDepart.classList.remove('hidden');
+    } else {
+      statutZone.textContent = "Tu n'es pas actuellement pointé(e) comme présent(e).";
+      btnArrivee.classList.remove('hidden');
+      btnDepart.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('btnPointerArrivee').onclick = async () => {
+    const { error } = await sb.from('pointages').insert({
+      benevole_id: benevoleActuel.id, date: todayISO(), heure_arrivee: new Date().toTimeString().slice(0, 8), type: 'presence',
+    });
+    if (error) { alert('Erreur lors du pointage : ' + error.message); return; }
+    showToast('Arrivée enregistrée.');
+    await verifierPointageDistance();
+  };
+
+  document.getElementById('btnPointerDepart').onclick = async () => {
+    const { data: ouvert } = await sb.from('pointages')
+      .select('id').eq('benevole_id', benevoleActuel.id).is('heure_depart', null).eq('type', 'presence')
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (ouvert) {
+      const { error } = await sb.from('pointages').update({ heure_depart: new Date().toTimeString().slice(0, 8) }).eq('id', ouvert.id);
+      if (error) { alert('Erreur lors du pointage : ' + error.message); return; }
+    }
+    showToast('Départ enregistré.');
+    await verifierPointageDistance();
+  };
 
   verifierSession();
 </script>

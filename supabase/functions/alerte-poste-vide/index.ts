@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { poste_id, date } = await req.json();
+    const { poste_id, date, nb_restant, seuil } = await req.json();
 
     const { data: poste } = await sb.from('postes').select('nom').eq('id', poste_id).single();
     if (!poste) throw new Error('Poste introuvable');
@@ -58,11 +58,15 @@ Deno.serve(async (req) => {
       .map((q: any) => q.benevoles)
       .filter((b: any) => b && b.statut === 'actif' && b.email);
 
+    const texteEffectif = nb_restant === 0
+      ? `n'a plus personne d'affecté`
+      : `ne compte plus que ${nb_restant} personne${nb_restant > 1 ? 's' : ''} (seuil d'alerte : ${seuil})`;
+
     const sujet = `⚠️ Besoin d'aide — ${poste.nom} le ${formatDateFr(date)}`;
     const html = `
       <div style="font-family: sans-serif; color: #23261F; max-width: 600px;">
         <h2 style="color: #B4462F;">Besoin d'un coup de main</h2>
-        <p>Le poste <strong>${poste.nom}</strong> n'a plus personne d'affecté le <strong>${formatDateFr(date)}</strong>
+        <p>Le poste <strong>${poste.nom}</strong> ${texteEffectif} le <strong>${formatDateFr(date)}</strong>
         (un désistement de dernière minute).</p>
         <p>Si tu es disponible ce jour-là et que tu peux venir, merci d'écrire à
         <strong>${ADMIN_EMAIL}</strong> pour te proposer — le planning sera mis à jour en conséquence.</p>
@@ -79,8 +83,8 @@ Deno.serve(async (req) => {
     // (même si aucun bénévole qualifié n'a pu être notifié).
     const htmlAdmin = `
       <div style="font-family: sans-serif; color: #23261F; max-width: 600px;">
-        <h2 style="color: #B4462F;">Poste vide détecté</h2>
-        <p>Le poste <strong>${poste.nom}</strong> est tombé à zéro personne le <strong>${formatDateFr(date)}</strong>
+        <h2 style="color: #B4462F;">Seuil d'alerte atteint</h2>
+        <p>Le poste <strong>${poste.nom}</strong> ${texteEffectif} le <strong>${formatDateFr(date)}</strong>
         (retrait automatique suite à un congé déclaré après validation du planning).</p>
         <p>${envoyes} bénévole(s) qualifié(s) sur ce poste ${envoyes > 1 ? 'ont' : 'a'} été prévenu(s) par email.</p>
         <p style="color:#6B6A5E; font-size:13px; margin-top:24px;">Banque Alimentaire de Lannion — Pointage BA22</p>
