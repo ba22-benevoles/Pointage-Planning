@@ -316,6 +316,7 @@
     <button class="tab-btn" data-view="planning">Planning</button>
     <button class="tab-btn" data-view="parametres">Paramètres</button>
     <button class="tab-btn" data-view="bilans">Bilans</button>
+    <a href="aide.html" target="_blank" style="margin-left:14px; align-self:center; font-size:14px; color:var(--ink-soft); text-decoration:underline;">❓ Aide</a>
   </nav>
   <main>
     <div class="view active" id="view-benevoles">
@@ -508,6 +509,12 @@
       </div>
     </div>
     <div class="field-row">
+      <div class="field">
+        <label>Note (pense-bête, ex. "Frais le lundi, Tri le mercredi")</label>
+        <textarea id="fNote" rows="2" style="width:100%; padding:10px 12px; font-size:14px; border:2px solid var(--line); border-radius:8px; font-family:inherit; box-sizing:border-box;"></textarea>
+      </div>
+    </div>
+    <div class="field-row">
       <div class="field"><label>Prénom</label><input type="text" id="fPrenom"></div>
       <div class="field"><label>Nom</label><input type="text" id="fNom"></div>
     </div>
@@ -694,7 +701,7 @@
 
   async function chargerBenevoles() {
     const { data, error } = await sb.from('benevoles').select(`
-      id, numero, nom, prenom, statut, categorie, distance_km, rue, code_postal, ville, telephone, email, date_depart, pointage_distance, nb_presences, type_activite,
+      id, numero, nom, prenom, statut, categorie, distance_km, rue, code_postal, ville, telephone, email, date_depart, pointage_distance, note, nb_presences, type_activite,
       benevole_postes ( postes ( nom ) ),
       disponibilites ( jour_semaine )
     `);
@@ -1185,6 +1192,7 @@
     document.getElementById('fEmail').value = b ? (b.email || '') : '';
     document.getElementById('fDateDepart').value = b ? (b.date_depart || '') : '';
     document.getElementById('fPointageDistance').checked = b ? (b.pointage_distance || false) : false;
+    document.getElementById('fNote').value = b ? (b.note || '') : '';
     document.getElementById('fTypeActivite').value = b ? (b.type_activite || '') : '';
 
     const checksZone = document.getElementById('checksPostes');
@@ -1237,6 +1245,7 @@
       email: document.getElementById('fEmail').value.trim(),
       date_depart: document.getElementById('fDateDepart').value || null,
       pointage_distance: document.getElementById('fPointageDistance').checked,
+      note: document.getElementById('fNote').value.trim() || null,
       type_activite: document.getElementById('fTypeActivite').value || null
     };
 
@@ -1739,7 +1748,12 @@
               badgeCumul = ` <span style="background:#6B4C9A;color:white;font-size:11px;padding:1px 6px;border-radius:6px;">🔀 aussi ${autresPostes.join(', ')}</span>`;
             }
           }
-          html += `<td class="${manque ? 'cell-manque' : ''} cell-editable" data-date="${j.dateStr}" data-poste-id="${p.id}" data-poste-nom="${p.nom}" data-row="${row}">${b ? b.prenom + ' ' + b.nom + badgeDest + badgeAccomp + badgeCumul : ''}</td>`;
+          // La note de la fiche (si elle existe) s'affiche en info-bulle au survol,
+          // et un petit repère 📝 signale sa présence sans avoir à survoler.
+          const noteBenevole = b ? (benevoles.find(x => x.id === b.id) || {}).note : null;
+          const titreCase = noteBenevole ? ` title="${noteBenevole.replace(/"/g, '&quot;')}"` : '';
+          const marqueNote = noteBenevole ? ' <span style="font-size:11px;">📝</span>' : '';
+          html += `<td class="${manque ? 'cell-manque' : ''} cell-editable"${titreCase} data-date="${j.dateStr}" data-poste-id="${p.id}" data-poste-nom="${p.nom}" data-row="${row}">${b ? b.prenom + ' ' + b.nom + marqueNote + badgeDest + badgeAccomp + badgeCumul : ''}</td>`;
         });
         html += `</tr>`;
       }
@@ -1911,7 +1925,7 @@
     const autres = disponibles.filter(b => !(b.postes || []).includes(posteNom));
 
     const optionsHtml = (liste) => liste.map(b =>
-      `<option value="${b.id}" ${actuel && actuel.id === b.id ? 'selected' : ''}>${b.prenom} ${b.nom}</option>`
+      `<option value="${b.id}" ${actuel && actuel.id === b.id ? 'selected' : ''} ${b.note ? `title="${b.note.replace(/"/g, '&quot;')}"` : ''}>${b.prenom} ${b.nom}${b.note ? ' 📝' : ''}</option>`
     ).join('');
 
     select.innerHTML = '<option value="">— vide —</option>' +

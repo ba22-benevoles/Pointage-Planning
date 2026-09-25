@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aide — Espace admin Pointage BA22</title>
+<style>
+  :root {
+    --bg: #F7F4EC; --panel: #FFFFFF; --ink: #23261F; --ink-soft: #6B6A5E;
+    --green: #33513F; --green-soft: #E4EBE3; --line: #E5DFCF; --amber-soft: #F5E6C8;
+  }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Public Sans','Segoe UI', system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 40px 24px 60px; }
+  h1 { font-family: Georgia, serif; color: var(--green); font-size: 28px; margin-bottom: 4px; }
+  .sub { color: var(--ink-soft); font-size: 14px; margin-bottom: 24px; }
+  .sommaire { background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 32px; }
+  .sommaire a { display: block; padding: 4px 0; color: var(--green); text-decoration: none; font-size: 14px; }
+  .sommaire a:hover { text-decoration: underline; }
+  h2 { font-family: Georgia, serif; color: var(--green); font-size: 20px; margin-top: 40px; margin-bottom: 10px; padding: 8px 12px; background: var(--green-soft); border-radius: 8px; }
+  h3 { color: var(--ink); font-size: 15px; margin-top: 20px; margin-bottom: 6px; }
+  ul { padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  .astuce { background: var(--amber-soft); border-left: 4px solid #B4462F; padding: 10px 14px; border-radius: 6px; margin: 12px 0; font-size: 14px; }
+  code { background: var(--green-soft); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+  a { color: var(--green); }
+  .retour { display: inline-block; margin-top: 40px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Aide — Espace admin</h1>
+  <div class="sub">Outil de pointage et planning — Banque Alimentaire de Lannion (BA22)</div>
+
+  <div class="sommaire">
+    <a href="#benevoles">👤 Bénévoles</a>
+    <a href="#conges">📅 Congés / Absences</a>
+    <a href="#planning">🗓️ Planning</a>
+    <a href="#parametres">⚙️ Paramètres</a>
+    <a href="#bilans">📊 Bilans</a>
+    <a href="#espace-benevole">📱 Espace personnel des bénévoles</a>
+    <a href="#securite">🔒 Sécurité</a>
+  </div>
+
+  <h2 id="benevoles">👤 Bénévoles</h2>
+  <p>Liste et fiches de tous les bénévoles et salariés, actifs ou non.</p>
+  <h3>Statuts possibles</h3>
+  <ul>
+    <li><strong>Actif</strong> — participe normalement, apparaît sur le kiosque et dans le planning</li>
+    <li><strong>Longue absence</strong> — mis de côté temporairement (n'apparaît plus dans le planning, mais reste dans la liste)</li>
+    <li><strong>Inactif</strong> — parti de l'association. Renseigner une <strong>date de départ</strong> déclenche l'anonymisation automatique de ses données identifiantes au 1ᵉʳ mars suivant (le temps de préparer le CERFA)</li>
+  </ul>
+  <div class="astuce">Changer le statut d'un bénévole en "Longue absence" ou "Inactif" le retire <strong>automatiquement</strong> du planning, sur toutes les semaines à venir.</div>
+  <h3>Champ Note</h3>
+  <p>Un pense-bête libre sur chaque fiche (ex. "Frais le lundi, Tri le mercredi"). Dès qu'une personne avec une note apparaît dans le planning, un petit repère 📝 s'affiche directement sur sa case (et dans le menu déroulant au moment de l'éditer) — survole-le pour lire le texte complet en info-bulle, sans avoir besoin de cliquer.</p>
+  <h3>Pointage à distance</h3>
+  <p>Une case à cocher permet à un bénévole (ex. relation publique) de pointer son arrivée/départ depuis son propre espace personnel, sans avoir besoin d'être physiquement à la BA. Ça ne l'empêche pas de pointer normalement sur le kiosque s'il vient aussi sur place.</p>
+
+  <h2 id="conges">📅 Congés / Absences</h2>
+  <p>Déclarer une absence retire automatiquement la personne du planning pour les dates concernées (si le planning était déjà enregistré).</p>
+  <div class="astuce"><strong>Annuler</strong> une absence ne remet <em>pas</em> automatiquement la personne dans le planning — c'est volontaire, pour éviter de deviner qui réaffecter à sa place. Il faut la réaffecter manuellement.</div>
+  <p>Les absences déjà terminées disparaissent automatiquement de la liste (rien à supprimer soi-même).</p>
+
+  <h2 id="planning">🗓️ Planning</h2>
+  <h3>Générer et enregistrer</h3>
+  <ul>
+    <li>Choisis une date de la semaine visée, une proposition se calcule automatiquement (basée sur les jours habituels et postes qualifiés de chacun)</li>
+    <li><strong>"Enregistrer ce planning"</strong> valide définitivement la semaine — sans ça, ce n'est qu'une proposition, et elle disparaît si tu changes de semaine</li>
+  </ul>
+  <h3>Éditer une case</h3>
+  <p>Clique sur n'importe quelle case pour changer qui y est affecté — <strong>n'importe quel bénévole actif</strong> peut être choisi, pas seulement ceux qualifiés sur ce poste (utile pour un renfort exceptionnel). Le menu regroupe d'abord les qualifiés, puis les autres en dessous.</p>
+  <div class="astuce">Si la personne choisie est déjà affectée sur un <strong>autre poste</strong> ce même jour, une confirmation te propose de la basculer proprement plutôt que de la dupliquer.</div>
+  <h3>Cas particuliers</h3>
+  <ul>
+    <li><strong>🚚 Saint-Brieuc</strong> — case à cocher sur les chauffeurs qui livrent occasionnellement là-bas</li>
+    <li><strong>👤 Accompagnant</strong> — pour un chauffeur qui accompagne sans conduire</li>
+    <li><strong>Lavage des camions</strong> — ligne tout en bas du tableau Chauffeur, simple clic pour cocher/décocher le jour de lavage (aucune personne précise à choisir)</li>
+    <li><strong>Salariés multi-postes</strong> — un salarié peut apparaître sur plusieurs postes le même jour (ex. "Salarié" et "Préparation"), contrairement aux bénévoles ordinaires limités à un seul poste par jour. Un badge 🔀 signale ce cumul</li>
+  </ul>
+  <h3>Envoyer par email</h3>
+  <ul>
+    <li><strong>Envoyer</strong> — envoie le planning complet (tous postes) à tous les bénévoles/salariés actifs, quel que soit le filtre "Afficher" à l'écran</li>
+    <li>Un <strong>message optionnel</strong> peut être ajouté en haut de l'email (ex. un rappel)</li>
+    <li><strong>Envoyer un message seul</strong> (en bas de l'onglet) — envoie un message sans aucun planning, utile pour une communication ponctuelle</li>
+    <li>Le champ "Email de test" permet de s'envoyer l'email à soi-même avant l'envoi réel</li>
+  </ul>
+
+  <h2 id="parametres">⚙️ Paramètres</h2>
+  <h3>Taux de valorisation</h3>
+  <p>Les montants (€/heure selon la fonction, €/km) utilisés pour calculer les bilans — à mettre à jour chaque année si le SMIC change.</p>
+  <h3>Seuils d'alerte par poste</h3>
+  <p>Pour chaque poste : un <strong>Max</strong> éditable (nombre de lignes affichées dans le planning) et un <strong>Seuil d'alerte</strong> — si un poste tombe à ce seuil (ou moins) suite à un désistement après validation du planning, un email est automatiquement envoyé aux bénévoles qualifiés sur ce poste pour demander de l'aide. Laisser le seuil vide désactive l'alerte pour ce poste.</p>
+
+  <h2 id="bilans">📊 Bilans</h2>
+  <p>Calcule pour chaque bénévole, sur une année choisie : jours de présence, heures valorisées, kilomètres et indemnité correspondante. Sert de base au CERFA de fin d'année.</p>
+
+  <h2 id="espace-benevole">📱 Espace personnel des bénévoles</h2>
+  <p>Accessible sur <code>pointage.esl22.fr/absence.html</code>, via un lien reçu par email (pas de mot de passe). Chaque bénévole peut y consulter son planning (semaine courante et suivante) et celui de son équipe, et déclarer/annuler ses absences en autonomie.</p>
+
+  <h2 id="securite">🔒 Sécurité</h2>
+  <ul>
+    <li>Le <strong>mot de passe du kiosque</strong> protège juste l'accès à l'écran de pointage (comme un mot de passe WiFi) — à ne pas confondre avec la connexion admin, bien plus solide (email + mot de passe)</li>
+    <li>Accès direct à l'espace admin, sans passer par le kiosque : <code>pointage.esl22.fr/#admin</code></li>
+  </ul>
+
+  <a class="retour" href="javascript:history.back()">← Retour</a>
+</div>
+</body>
+</html>
