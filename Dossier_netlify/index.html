@@ -205,7 +205,17 @@
     .poste-table-wrap { page-break-inside: avoid; }
     .nonaffectes-box { display: none; }
     .cell-manque { background: none !important; -webkit-print-color-adjust: exact; }
+
+    #listeImprimable.actif, #listeImprimable.actif * { visibility: visible; }
+    #listeImprimable.actif { display: block !important; position: absolute; top: 0; left: 0; width: 100%; }
   }
+  #listeImprimable .colonnes { display: flex; gap: 14px; align-items: flex-start; margin-top: 8px; }
+  #listeImprimable table { flex: 1; border-collapse: collapse; font-size: 10.5px; }
+  #listeImprimable th, #listeImprimable td { border: 1px solid #999; padding: 3px 5px; text-align: left; }
+  #listeImprimable th { background: #E4EBE3; }
+  #listeImprimable td.col-vide { min-width: 55px; }
+  #listeImprimable h2 { font-family: Georgia, serif; color: #33513F; font-size: 15px; margin: 0 0 4px; }
+  @page { margin: 10mm; }
 </style>
 </head>
 <body>
@@ -323,6 +333,7 @@
       <div class="toolbar">
         <input type="text" id="searchB" placeholder="Rechercher un nom ou un numéro…">
         <button class="btn-primary" id="btnAdd">+ Ajouter un bénévole</button>
+        <button class="btn-cancel" id="btnImprimerListe">🖨️ Imprimer une liste</button>
       </div>
       <table>
         <thead><tr>
@@ -336,6 +347,7 @@
         </tr></thead>
         <tbody id="tbodyB"></tbody>
       </table>
+      <div id="listeImprimable" style="display:none;"></div>
     </div>
     <div class="view" id="view-conges">
       <div class="conge-form">
@@ -766,11 +778,23 @@
     conges = data;
   }
 
+  // Identifiants des bénévoles réellement planifiés aujourd'hui (tous postes confondus),
+  // indépendamment de leurs jours habituels — corrige le cas d'une affectation
+  // exceptionnelle un jour qui n'est pas dans les jours habituels de la personne.
+  let planningDuJourIds = new Set();
+
+  async function chargerPlanningDuJourIds() {
+    const { data, error } = await sb.from('planning').select('benevole_id').eq('date', todayISO());
+    if (error) { console.error(error); planningDuJourIds = new Set(); return; }
+    planningDuJourIds = new Set((data || []).map(r => r.benevole_id));
+  }
+
   async function chargerTout() {
     await chargerPostes();
     await chargerBenevoles();
     await chargerConges();
     await chargerFermetures();
+    await chargerPlanningDuJourIds();
   }
 
   // ====================================================
@@ -790,6 +814,14 @@
   };
   document.getElementById('btnCancelLogin').onclick = () => {
     document.getElementById('loginOverlay').classList.remove('open');
+    // Si on est arrivé ici via le raccourci #admin (qui saute le mot de passe
+    // du site) et qu'on annule la connexion admin, il faut reverrouiller —
+    // sinon le kiosque reste visible sans qu'aucun mot de passe n'ait jamais
+    // été saisi.
+    if (window.location.hash === '#admin' && localStorage.getItem('site_unlocked') !== 'yes') {
+      window.location.hash = '';
+      location.reload();
+    }
   };
   document.getElementById('btnConfirmLogin').onclick = async () => {
     const email = document.getElementById('adminEmail').value.trim();
@@ -877,7 +909,9 @@
     }
 
     const actifs = benevoles.filter(p => p.statut === 'actif');
-    const attendus = actifs.filter(estAttenduAujourdhui);
+    // "Attendu aujourd'hui" = jour habituel, OU réellement planifié aujourd'hui
+    // (couvre les affectations exceptionnelles un jour inhabituel pour la personne).
+    const attendus = actifs.filter(p => estAttenduAujourdhui(p) || planningDuJourIds.has(p.id));
     const enRechercheOuVoirTous = raw.length > 0 || voirTous;
     const pool = enRechercheOuVoirTous ? actifs : attendus;
 
@@ -888,7 +922,7 @@
     // jour précédent (ce n'est pas une vraie présence d'aujourd'hui, mais un
     // oubli à régulariser — déjà géré ailleurs par l'écran "RÉGULARISATION").
     const presentsNonPrevus = !enRechercheOuVoirTous
-      ? actifs.filter(p => !estAttenduAujourdhui(p) && p.pointageStatus !== 'none' && !p.depuisAutreJour)
+      ? actifs.filter(p => !estAttenduAujourdhui(p) && !planningDuJourIds.has(p.id) && p.pointageStatus !== 'none' && !p.depuisAutreJour)
       : [];
 
     const infoZone = document.getElementById('kioskInfo');
@@ -1159,6 +1193,37 @@
   }
   document.getElementById('searchB').addEventListener('input', renderBenevoles);
   document.getElementById('btnAdd').onclick = () => openModal(null);
+
+  document.getElementById('btnImprimerListe').onclick = () => {
+    const titreColonne = prompt('Titre de la seconde colonne (ex. "Présent", "Cotisation réglée"…) :', 'Note');
+    if (titreColonne === null) return; // annulé
+
+    const actifs = benevoles.filter(b => b.statut === 'actif').slice()
+      .sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
+
+    const entete = titreColonne || 'Note';
+    const NB_COLONNES = 3;
+    const parColonne = Math.ceil(actifs.length / NB_COLONNES);
+
+    let html = `<h2>Liste des bénévoles actifs — ${new Date().toLocaleDateString('fr-FR')}</h2>`;
+    html += '<div class="colonnes">';
+    for (let c = 0; c < NB_COLONNES; c++) {
+      const tranche = actifs.slice(c * parColonne, (c + 1) * parColonne);
+      if (!tranche.length) continue;
+      html += '<table><thead><tr><th>Nom</th><th>' + entete + '</th></tr></thead><tbody>';
+      tranche.forEach(b => {
+        html += `<tr><td>${b.prenom} ${b.nom}</td><td class="col-vide"></td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    const zone = document.getElementById('listeImprimable');
+    zone.innerHTML = html;
+    zone.classList.add('actif');
+    window.print();
+    zone.classList.remove('actif');
+  };
 
   function genererNumeroUnique() {
     const pris = new Set(benevoles.map(b => b.numero));
