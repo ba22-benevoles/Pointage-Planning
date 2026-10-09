@@ -99,6 +99,9 @@
   nav.tabs { display: flex; gap: 6px; padding: 16px 32px 0; border-bottom: 2px solid var(--line); }
   nav.tabs button { padding: 10px 18px; border: none; background: none; font-size: 15px; font-weight: 600; color: var(--ink-soft); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; }
   nav.tabs button.active { color: var(--green); border-bottom-color: var(--green); }
+  /* Lien vers l'espace collecte : à l'opposé des onglets, pour bien séparer les deux applications */
+  nav.tabs .lien-collecte { margin-left: auto; align-self: center; margin-bottom: 6px; padding: 7px 16px; border: 2px solid var(--amber); border-radius: 999px; background: var(--amber-soft); color: #8A5C16; font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+  nav.tabs .lien-collecte:hover { background: var(--amber); color: white; }
 
   #adminView main { padding: 26px 32px 60px; max-width: 1050px; margin: 0 auto; }
   .view { display: none; } .view.active { display: block; }
@@ -327,6 +330,7 @@
     <button class="tab-btn" data-view="parametres">Paramètres</button>
     <button class="tab-btn" data-view="bilans">Bilans</button>
     <a href="aide.html" target="_blank" style="margin-left:14px; align-self:center; font-size:14px; color:var(--ink-soft); text-decoration:underline;">❓ Aide</a>
+    <a href="collecte.html" target="_blank" class="lien-collecte" title="Ouvre l'espace collecte dans un nouvel onglet (application séparée)">🛒 Collecte ↗</a>
   </nav>
   <main>
     <div class="view active" id="view-benevoles">

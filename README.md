@@ -8,6 +8,7 @@ Outil de pointage, planning et gestion des bénévoles pour la Banque Alimentair
 - **Espace admin** — gestion des bénévoles/salariés, congés, fermetures, planning hebdomadaire, bilans annuels (heures valorisées, indemnités kilométriques)
 - **Planning persistant** — proposition automatique puis validation, éditable manuellement (n'importe quel bénévole sur n'importe quel poste), avec gestion des cas particuliers (destination Saint-Brieuc pour les chauffeurs, accompagnants, lavage des camions, salariés multi-postes)
 - **Espace bénévole autonome** (`absence.html`) — connexion par lien magique (email, sans mot de passe), consultation de son propre planning et de celui de son équipe, déclaration/annulation d'absences
+- **Collecte nationale** (`collecte.html`) — grille des créneaux de 2 h par magasin pour la collecte annuelle (inscrits / besoin, code couleur), saisie par la responsable collecte et par un référent par magasin (lien magique, accès via la table `collecte_acces`), n° de tournée et équipage par tournée et par jour (camion + 2 chauffeurs choisis parmi les bénévoles qualifiés « Chauffeur »), fiches imprimables (magasins, une feuille par tournée), clôture RGPD qui efface noms et téléphones et ne garde que les référents ayant donné leur accord (politique dédiée : `confidentialite-collecte.html`)
 - **Automatisations** — retrait automatique du planning en cas de congé ou de changement de statut, fermeture automatique des sessions de pointage oubliées, anonymisation RGPD des bénévoles partis, alerte email si un poste tombe à zéro suite à un désistement, envoi automatique du planning hebdomadaire (email)
 - **Jours fériés français** calculés automatiquement (dates fixes + Pâques et dérivés)
 
@@ -24,6 +25,8 @@ Outil de pointage, planning et gestion des bénévoles pour la Banque Alimentair
 Dossier_netlify/
   index.html       — kiosque de pointage + espace admin (une seule page, deux vues)
   absence.html     — espace bénévole autonome (lien magique)
+  collecte.html    — collecte nationale annuelle (responsable + référents magasin)
+  confidentialite-collecte.html — données personnelles de la collecte
 supabase/
   functions/
     envoyer-planning-hebdo/   — email automatique du vendredi

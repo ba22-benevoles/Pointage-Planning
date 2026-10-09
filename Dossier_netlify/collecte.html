@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Collecte — Banque Alimentaire de Lannion</title>
+<style>
+  :root {
+    --bg: #FAF6EF; --panel: #FFFFFF; --ink: #23261F; --ink-soft: #6B6A5E;
+    --green: #33513F; --green-soft: #E4EBE3; --amber: #C98A2C; --amber-soft: #F6E9D2;
+    --line: #E5DFCF; --danger: #B4462F; --danger-soft: #FBEAE4;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: 'Public Sans','Segoe UI', system-ui, sans-serif; }
+  .hidden { display: none !important; }
+
+  /* --- Connexion (même présentation qu'absence.html) --- */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .box { background: var(--panel); border: 2px solid var(--line); border-radius: 18px; padding: 36px 32px; width: 100%; max-width: 460px; }
+  .mark { font-family: Georgia, serif; font-size: 24px; font-weight: 700; color: var(--green); text-align: center; }
+  .sub { color: var(--ink-soft); font-size: 14px; text-align: center; margin: 6px 0 22px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 700; color: var(--ink-soft); margin-bottom: 5px; }
+  .field input, .field select { width: 100%; padding: 11px 13px; font-size: 15px; border: 2px solid var(--line); border-radius: 10px; outline: none; font-family: inherit; }
+  .field input:focus, .field select:focus { border-color: var(--green); }
+  .btn { padding: 12px 16px; font-size: 15px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; font-family: inherit; }
+  .btn-block { width: 100%; }
+  .btn-primary { background: var(--green); color: white; }
+  .btn-secondary { background: #EFEDE4; color: var(--ink); }
+  .btn-small { padding: 7px 12px; font-size: 13px; }
+  .btn-link { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; font-family: inherit; }
+  .error { color: var(--danger); font-size: 13px; min-height: 18px; margin: 4px 0 8px; }
+
+  /* --- Application --- */
+  header.top { padding: 14px 28px; border-bottom: 2px solid var(--line); background: var(--green-soft); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  header.top .titre { font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: var(--green); }
+  header.top .qui { font-size: 13px; color: var(--ink-soft); }
+  .badge { font-size: 11px; font-weight: 700; background: var(--green); color: white; padding: 4px 10px; border-radius: 999px; margin-right: 8px; }
+  nav.tabs { display: flex; gap: 6px; padding: 14px 28px 0; border-bottom: 2px solid var(--line); }
+  nav.tabs button { padding: 10px 18px; border: none; background: none; font-size: 15px; font-weight: 600; color: var(--ink-soft); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; font-family: inherit; }
+  nav.tabs button.active { color: var(--green); border-bottom-color: var(--green); }
+  main { padding: 22px 28px 60px; max-width: 1300px; margin: 0 auto; }
+
+  .resume { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .resume .carte { background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 10px 16px; min-width: 130px; }
+  .resume .nb { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .resume .lib { font-size: 12px; color: var(--ink-soft); }
+  .resume .vide .nb { color: var(--danger); } .resume .incomplet .nb { color: var(--amber); } .resume .complet .nb { color: var(--green); }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .toolbar .filtre { padding: 7px 14px; border: 2px solid var(--line); background: var(--panel); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; color: var(--ink-soft); }
+  .toolbar .filtre.active { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .toolbar .espace { flex: 1; }
+  .maj { font-size: 12px; color: var(--ink-soft); }
+
+  .grille-wrap { overflow-x: auto; background: var(--panel); border: 2px solid var(--line); border-radius: 14px; }
+  table.grille { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.grille th, table.grille td { border: 1px solid var(--line); padding: 6px; text-align: center; }
+  table.grille th { background: var(--green-soft); color: var(--green); font-weight: 700; }
+  table.grille th.jour { font-size: 14px; }
+  table.grille td.magasin { text-align: left; white-space: nowrap; font-weight: 600; padding: 8px 12px; position: sticky; left: 0; background: var(--panel); }
+  table.grille td.magasin .commune { display: block; font-weight: 400; font-size: 12px; color: var(--ink-soft); }
+  td.cell { cursor: pointer; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 58px; }
+  td.cell:hover { outline: 2px solid var(--green); outline-offset: -2px; }
+  td.cell.vide { background: var(--danger-soft); color: var(--danger); }
+  td.cell.incomplet { background: var(--amber-soft); color: #8A5C16; }
+  td.cell.complet { background: var(--green-soft); color: var(--green); }
+  td.cell.sans-besoin { background: #F5F2E9; color: var(--ink-soft); font-weight: 400; }
+  .tournee { display: inline-block; font-size: 11px; font-weight: 700; background: var(--green); color: white; border-radius: 6px; padding: 1px 6px; margin-right: 6px; vertical-align: 1px; }
+  .tournee.aucune { background: #EFEDE4; color: var(--ink-soft); }
+  .toolbar select { padding: 7px 10px; border: 2px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; font-family: inherit; color: var(--ink-soft); background: var(--panel); }
+  table.liste input.num { width: 60px; padding: 5px; border: 2px solid var(--line); border-radius: 8px; }
+  td.sep, th.sep { border-left: 3px solid var(--green) !important; }
+  .legende { font-size: 12px; color: var(--ink-soft); margin-top: 10px; }
+
+  .bandeau { border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.45; }
+  .bandeau.info { background: var(--green-soft); color: var(--green); }
+  .bandeau.alerte { background: var(--amber-soft); color: #7A5113; }
+  .bandeau label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+  .bandeau input[type=checkbox] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--green); flex-shrink: 0; }
+  .bandeau a { color: inherit; }
+  .mention { font-size: 12px; color: var(--ink-soft); margin: -4px 0 10px; }
+  .mention a { color: var(--ink-soft); }
+  .etat.garde { background: var(--green-soft); color: var(--green); }
+  .etat.supprime { background: var(--danger-soft); color: var(--danger); }
+  .carte-tournee { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 16px; }
+  .carte-tournee h3 { margin: 0 0 4px; font-size: 17px; color: var(--green); display: flex; align-items: center; gap: 8px; }
+  .carte-tournee .mags { font-size: 13px; color: var(--ink-soft); margin-bottom: 12px; }
+  table.equipage { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.equipage th { font-size: 12px; color: var(--ink-soft); text-align: left; padding: 4px 6px; }
+  table.equipage td { padding: 5px 6px; border-top: 1px solid var(--line); vertical-align: middle; }
+  table.equipage td.j { font-weight: 700; white-space: nowrap; width: 150px; }
+  table.equipage input, table.equipage select { width: 100%; padding: 7px 9px; border: 2px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--panel); }
+  table.equipage input:focus, table.equipage select:focus { border-color: var(--green); outline: none; }
+  table.equipage td.etat-eq { width: 90px; text-align: center; }
+  @media (max-width: 760px) { table.equipage, table.equipage tbody, table.equipage tr, table.equipage td { display: block; width: auto !important; } table.equipage thead { display: none; } table.equipage td.j { padding-top: 12px; } }
+  /* --- Fenêtre créneau --- */
+  .overlay { position: fixed; inset: 0; background: rgba(35,38,31,0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .modal { background: var(--panel); border-radius: 16px; padding: 24px; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; }
+  .modal h2 { font-family: Georgia, serif; color: var(--green); margin: 0 0 4px; font-size: 20px; }
+  .modal .quand { color: var(--ink-soft); font-size: 14px; margin-bottom: 16px; }
+  .inscrit { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg); border: 2px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
+  .inscrit .nom { font-weight: 700; font-size: 14px; }
+  .inscrit .detail { color: var(--ink-soft); font-size: 13px; }
+  .inscrit .detail a { color: var(--green); }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .besoin-zone { display: flex; align-items: center; gap: 10px; margin: 14px 0; font-size: 14px; }
+  .besoin-zone input { width: 70px; padding: 7px; border: 2px solid var(--line); border-radius: 8px; font-size: 15px; }
+
+  /* --- Onglet magasins --- */
+  .bloc { background: var(--panel); border: 2px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+  .bloc h3 { margin: 0 0 12px; font-size: 16px; color: var(--green); }
+  table.liste { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.liste th, table.liste td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: top; }
+  table.liste th { font-size: 12px; color: var(--ink-soft); }
+  table.liste input[type=number] { width: 60px; padding: 5px; border: 2px solid var(--line); border-radius: 8px; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; background: var(--amber-soft); color: #8A5C16; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; margin: 2px 4px 2px 0; }
+  .tag button { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; padding: 0 2px; }
+  .acces { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; font-size: 13px; }
+  .acces .mail { font-weight: 600; }
+  .etat { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .etat.ok { background: var(--green-soft); color: var(--green); }
+  .etat.invite { background: var(--amber-soft); color: #8A5C16; }
+  .etat.rien { background: #EFEDE4; color: var(--ink-soft); }
+  .acces .mini { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 2px 8px; font-size: 12px; cursor: pointer; font-family: inherit; color: var(--green); }
+  .acces .mini.suppr { color: var(--danger); }
+  .ajout-ligne { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .ajout-ligne .field { margin: 0; flex: 1; min-width: 150px; }
+  .note { font-size: 13px; color: var(--ink-soft); margin: 6px 0 0; }
+  .inactif { opacity: 0.5; }
+
+  .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--green); color: white; padding: 13px 22px; border-radius: 10px; font-weight: 600; opacity: 0; transition: 0.25s ease; pointer-events: none; z-index: 100; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .pied { text-align: center; margin-top: 20px; font-size: 11px; color: var(--ink-soft); }
+  .pied a { color: var(--ink-soft); }
+
+  /* --- Impression : une fiche par magasin --- */
+  #impression { display: none; }
+  @media print {
+    body { background: white; }
+    #app, .toast, .overlay { display: none !important; }
+    #impression { display: block; }
+    .fiche { page-break-after: always; font-family: Arial, sans-serif; }
+    .fiche h1 { font-size: 20px; margin: 0 0 4px; }
+    .fiche .s { font-size: 12px; color: #555; margin-bottom: 12px; }
+    .fiche table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .fiche th, .fiche td { border: 1px solid #999; padding: 6px; vertical-align: top; text-align: left; }
+    .fiche th { background: #eee; }
+    .fiche td.h { white-space: nowrap; font-weight: bold; width: 90px; }
+    .fiche .manque { color: #B4462F; font-style: italic; }
+    .fiche h2 { font-size: 16px; margin: 18px 0 6px; }
+    .fiche table.tour { table-layout: fixed; }
+    .fiche table.tour th.mag { width: 45%; }
+    .fiche td.case, .fiche th.case { width: 80px; }
+    .fiche table.eq { margin-bottom: 14px; }
+    .fiche table.chauf th.t { width: 70px; }
+    .fiche table.chauf td.t { font-weight: bold; white-space: nowrap; }
+    .fiche table.chauf td.mags { font-size: 11px; color: #444; }
+    .fiche table.chauf th.tel { width: 140px; }
+    .fiche table.eq td.j { width: 160px; font-weight: bold; }
+  }
+  @media (max-width: 640px) {
+    header.top, nav.tabs, main { padding-left: 14px; padding-right: 14px; }
+    .field-row { flex-direction: column; gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ CONNEXION ============ -->
+<div id="ecranLogin" class="login-wrap">
+  <div class="box">
+    <div id="etapeEmail">
+      <div class="mark">Collecte nationale</div>
+      <div class="sub">Espace réservé à la responsable collecte et aux référents magasin.<br>Reçois un lien de connexion par email.</div>
+      <div class="field">
+        <label for="champEmail">Votre adresse email</label>
+        <input type="email" id="champEmail" placeholder="prenom.nom@exemple.fr" autocomplete="email">
+      </div>
+      <div class="error" id="erreurEmail"></div>
+      <button class="btn btn-primary btn-block" id="btnEnvoyerLien">Recevoir un lien de connexion</button>
+    </div>
+    <div id="etapeAttente" class="hidden">
+      <div class="mark">Vérifie ta boîte mail</div>
+      <div class="sub">Un lien de connexion vient d'être envoyé à <span id="emailAffiche"></span>.<br>Clique dessus pour accéder à l'espace collecte (pense aux spams).</div>
+      <button class="btn btn-secondary btn-block" id="btnRecommencer">Changer d'email</button>
+    </div>
+    <div class="pied">© 2026 Banque Alimentaire des Côtes d'Armor · <a href="confidentialite-collecte.html" target="_blank">Données personnelles et confidentialité</a></div>
+  </div>
+</div>
+
+<!-- ============ APPLICATION ============ -->
+<div id="app" class="hidden">
+  <header class="top">
+    <div>
+      <span class="badge" id="badgeRole">Collecte</span>
+      <span class="titre">Collecte nationale</span>
+      <div class="qui" id="texteQui"></div>
+    </div>
+    <button class="btn btn-secondary btn-small" id="btnDeconnexion">Se déconnecter</button>
+  </header>
+  <nav class="tabs" id="onglets">
+    <button class="active" data-vue="tableau">Tableau de bord</button>
+    <button data-vue="tournees" id="ongletTournees">Tournées &amp; chauffeurs</button>
+    <button data-vue="magasins" id="ongletMagasins">Magasins &amp; accès</button>
+  </nav>
+
+  <main>
+    <!-- Tableau de bord -->
+    <section id="vue-tableau">
+      <div id="bandeaux"></div>
+      <div class="resume" id="resume"></div>
+      <div class="toolbar">
+        <div id="filtresJours" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+        <select id="filtreTournee" title="Filtrer par tournée"></select>
+        <span class="espace"></span>
+        <span class="maj" id="texteMaj"></span>
+        <button class="btn btn-secondary btn-small" id="btnRafraichir">↻ Actualiser</button>
+        <button class="btn btn-secondary btn-small" id="btnImprimer" title="Une fiche par magasin avec les noms">🖨 Fiches magasins</button>
+        <button class="btn btn-secondary btn-small" id="btnImprimerTournees" title="Une feuille par tournée : équipage, camion et magasins à collecter">🚚 Tournées chauffeurs</button>
+      </div>
+      <div class="grille-wrap"><table class="grille" id="grille"></table></div>
+      <div class="legende">Chaque case indique <b>inscrits / besoin</b>. Rouge : personne · Orange : incomplet · Vert : complet. Clique sur une case pour voir ou modifier les noms.</div>
+    </section>
+
+    <!-- Tournées & chauffeurs (responsable uniquement) -->
+    <section id="vue-tournees" class="hidden">
+      <div class="toolbar">
+        <span class="espace"></span>
+        <button class="btn btn-secondary btn-small" id="btnImprimerChauffeurs" title="Vue d'ensemble : équipages de toutes les tournées et liste des chauffeurs">🖨 Imprimer le tableau des chauffeurs</button>
+      </div>
+      <div id="resumeTournees"></div>
+      <div id="listeTournees"></div>
+      <datalist id="listeCamions"></datalist>
+      <p class="note">Pour chaque tournée et chaque jour : le camion et ses 2 chauffeurs. Enregistrement automatique à chaque changement. Un chauffeur ou un camion ne peut faire qu'une tournée par jour. La liste propose les bénévoles actifs qualifiés « Chauffeur » dans l'outil de pointage : pour en ajouter un, l'administrateur coche ce poste sur sa fiche. Les numéros de tournée se règlent dans l'onglet « Magasins &amp; accès ». Les affectations sont effacées à la clôture de la collecte.</p>
+    </section>
+
+    <!-- Magasins & accès (responsable uniquement) -->
+    <section id="vue-magasins" class="hidden">
+      <div class="bloc">
+        <h3>Magasins</h3>
+        <table class="liste">
+          <thead><tr><th>Tournée</th><th>Magasin</th><th>Commune</th><th>Besoin / créneau</th><th>Référents</th><th>Actif</th></tr></thead>
+          <tbody id="listeMagasins"></tbody>
+        </table>
+        <div class="ajout-ligne" style="margin-top:14px;">
+          <div class="field"><label>Nom du magasin</label><input id="nvMagNom" placeholder="Intermarché"></div>
+          <div class="field"><label>Commune</label><input id="nvMagCommune" placeholder="Ploulec'h"></div>
+          <div class="field" style="max-width:120px;"><label>Besoin</label><input id="nvMagBesoin" type="number" min="0" max="2" value="2"></div>
+          <div class="field" style="max-width:120px;"><label>Tournée</label><input id="nvMagTournee" type="number" min="1" max="99" placeholder="ex. 1"></div>
+          <button class="btn btn-primary btn-small" id="btnAjouterMagasin">+ Ajouter</button>
+        </div>
+        <p class="note">2 bénévoles maximum par créneau (mettre 1 pour un petit magasin, 0 pour fermer un créneau). Le n° de tournée indique aux chauffeurs les magasins à collecter sur leur tournée (modifiable à tout moment, vide = pas encore affecté). Les créneaux d'un nouveau magasin sont créés automatiquement. Modifier le besoin ici change le besoin par défaut <i>et</i> celui de tous ses créneaux. Un magasin désactivé disparaît du tableau de bord sans perdre ses inscriptions.</p>
+      </div>
+
+      <div class="bloc">
+        <h3>Ajouter un référent magasin</h3>
+        <div class="ajout-ligne">
+          <div class="field"><label>Email du référent</label><input id="nvRefEmail" type="email" placeholder="prenom.nom@exemple.fr"></div>
+          <div class="field"><label>Magasin</label><select id="nvRefMagasin"></select></div>
+          <button class="btn btn-primary btn-small" id="btnAjouterReferent">+ Donner l'accès et inviter</button>
+        </div>
+        <p class="note">Un lien de connexion lui est envoyé aussitôt par email : il arrive sur cette page et ne voit et ne remplit que la grille de son ou ses magasins (l'ajouter une fois par magasin). Quand il a cliqué sur le lien, son adresse passe à « ✓ connecté ». Resté sur « ✉ invité » après quelques jours : adresse probablement erronée, à vérifier avec lui.</p>
+      </div>
+
+      <div class="bloc">
+        <h3>Responsables collecte</h3>
+        <div id="listeResponsables"></div>
+        <div class="ajout-ligne" style="margin-top:10px;">
+          <div class="field"><label>Email</label><input id="nvRespEmail" type="email" placeholder="prenom.nom@exemple.fr"></div>
+          <button class="btn btn-primary btn-small" id="btnAjouterResponsable">+ Ajouter</button>
+        </div>
+        <p class="note">Les administrateurs de l'outil de pointage sont responsables collecte d'office.</p>
+      </div>
+
+      <div class="bloc">
+        <h3>Édition</h3>
+        <div id="texteEdition" style="font-size:14px; margin-bottom:12px;"></div>
+        <div id="zoneCloture" style="margin-bottom:18px;">
+          <button class="btn btn-secondary btn-small" id="btnCloturer" style="color:var(--danger);">Clôturer la collecte</button>
+          <p class="note">À faire dans le mois qui suit la collecte, une fois le bilan fait. Efface définitivement les noms, téléphones et remarques des bénévoles inscrits (seul le nombre d'inscrits par créneau est gardé, sans nom), et supprime les référents qui n'ont pas donné leur accord de conservation. Plus aucune saisie possible ensuite.</p>
+        </div>
+        <div class="ajout-ligne">
+          <div class="field"><label>Nouveau jour 1</label><input id="nvJour1" type="date"></div>
+          <div class="field"><label>Nouveau jour 2 (facultatif)</label><input id="nvJour2" type="date"></div>
+          <button class="btn btn-secondary btn-small" id="btnNouvelleEdition" style="color:var(--danger);">Démarrer une nouvelle édition</button>
+        </div>
+        <p class="note">Pour la collecte suivante (printemps ou automne), après la clôture : efface le bilan anonyme précédent et recrée les créneaux aux nouvelles dates. Magasins, tournées, responsables et référents conservés ; ces derniers redonnent leur accord de conservation pour la nouvelle collecte.</p>
+      </div>
+    </section>
+    <div class="pied">© 2026 Banque Alimentaire des Côtes d'Armor · <a href="confidentialite-collecte.html" target="_blank">Données personnelles et confidentialité</a></div>
+  </main>
+</div>
+
+<!-- Fenêtre détail d'un créneau -->
+<div class="overlay hidden" id="fenetre">
+  <div class="modal">
+    <h2 id="fenMagasin"></h2>
+    <div class="quand" id="fenQuand"></div>
+    <div id="fenListe"></div>
+    <div class="besoin-zone" id="fenBesoinZone">
+      <label for="fenBesoin">Besoin pour ce créneau :</label>
+      <input type="number" id="fenBesoin" min="0" max="2">
+      <button class="btn btn-secondary btn-small" id="fenBtnBesoin">Enregistrer</button>
+    </div>
+    <div id="fenComplet" class="hidden" style="font-size:14px; font-weight:700; color:var(--green); background:var(--green-soft); border-radius:10px; padding:10px 14px; margin:12px 0;">Créneau complet. Retirer quelqu'un pour libérer une place.</div>
+    <div id="fenAjoutZone">
+    <div style="font-weight:700; font-size:14px; margin:16px 0 8px;">Ajouter un bénévole</div>
+    <div class="field-row">
+      <div class="field"><label>Nom et prénom</label><input id="fenNom" autocomplete="off"></div>
+      <div class="field"><label>Téléphone</label><input id="fenTel" type="tel" autocomplete="off"></div>
+    </div>
+    <div class="field"><label>Remarque (facultatif)</label><input id="fenRemarque" placeholder="ex. vient avec son fils" autocomplete="off"></div>
+    <div class="mention">Nom et téléphone servent uniquement à organiser cette collecte et sont effacés à sa clôture. Pas d'information sensible (santé…) dans la remarque. Préviens le bénévole. <a href="confidentialite-collecte.html" target="_blank">En savoir plus</a></div>
+    </div>
+    <div class="error" id="fenErreur"></div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-primary" id="fenBtnAjouter" style="flex:1;">Ajouter</button>
+      <button class="btn btn-secondary" id="fenBtnFermer">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div id="impression"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://pljyvybrcjrhmguewrzy.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_lkpGFUjhjG2nHBGbi7uB1w_9FanU5Q_';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Client séparé pour envoyer les invitations : flux « implicit » pour que le lien
+  // fonctionne dans le navigateur du référent, et aucune session enregistrée ici.
+  const sbInvitation = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit', storageKey: 'collecte-invitation' }
+  });
+  const URL_COLLECTE = window.location.href.split('?')[0].split('#')[0];
+
+  // ---------- État ----------
+  let estResponsable = false;
+  let monConsentement = null;
+  let equipages = [];             // responsable : équipages (tournée × jour)
+  let chauffeurs = [];            // responsable : bénévoles qualifiés chauffeurs     // référent : date de son accord de conservation (ou null)
+  let monEmail = '';
+  let parametres = null;
+  let creneaux = [];          // créneaux + magasin + inscriptions
+  let filtreJour = 'tous';
+  let filtreTournee = 'toutes';   // 'toutes', 'aucune' ou un numéro
+  let creneauOuvert = null;   // id du créneau affiché dans la fenêtre
+  let minuterie = null;
+
+  const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+  const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+  // ---------- Utilitaires ----------
+  const $ = id => document.getElementById(id);
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function jourLong(iso) { const d = new Date(iso + 'T12:00:00'); return `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`; }
+  function jourCourt(iso) { const d = new Date(iso + 'T12:00:00'); return `${JOURS[d.getDay()].slice(0, 3)}. ${d.getDate()}/${d.getMonth() + 1}`; }
+  function heure(t) { if (!t) return ''; const [h, m] = t.split(':'); return parseInt(h, 10) + 'h' + (m === '00' ? '' : m); }
+  // Ordre des magasins : tournée (non affectés à la fin), puis commune, puis nom
+  function ordreMagasins(a, b) {
+    return (a.tournee ?? 999) - (b.tournee ?? 999)
+      || (a.commune || '').localeCompare(b.commune || '') || a.nom.localeCompare(b.nom);
+  }
+  const badgeTournee = t => t ? `<span class="tournee" title="Tournée ${t}">T${t}</span>` : '';
+  function filtrerCreneaux() {
+    return creneaux.filter(c => (filtreJour === 'tous' || c.jour === filtreJour)
+      && (filtreTournee === 'toutes'
+          || (filtreTournee === 'aucune' ? c.collecte_magasins.tournee == null : c.collecte_magasins.tournee === +filtreTournee)));
+  }
+  function statut(c) {
+    const n = c.collecte_inscriptions.length;
+    if (c.besoin === 0) return 'sans-besoin';
+    if (n === 0) return 'vide';
+    return n < c.besoin ? 'incomplet' : 'complet';
+  }
+  function showToast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+  function afficherEtape(id) {
+    ['etapeEmail', 'etapeAttente'].forEach(e => $(e).classList.toggle('hidden', e !== id));
+  }
+
+  // ---------- Connexion par lien magique ----------
+  $('btnEnvoyerLien').onclick = async () => {
+    const email = $('champEmail').value.trim();
+    const err = $('erreurEmail'), btn = $('btnEnvoyerLien');
+    err.textContent = '';
+    if (!email) { err.textContent = 'Merci de renseigner ton email.'; return; }
+    btn.disabled = true;
+
+    const { data: autorise } = await sb.rpc('collecte_email_autorise', { p_email: email });
+    if (!autorise) {
+      err.textContent = "Cet email n'a pas d'accès à l'espace collecte. Contacte la responsable de la collecte.";
+      btn.disabled = false; return;
+    }
+    const { error } = await sb.auth.signInWithOtp({
+      email, options: { emailRedirectTo: window.location.href.split('?')[0].split('#')[0] }
+    });
+    btn.disabled = false;
+    if (error) { err.textContent = "Erreur lors de l'envoi, réessaie."; return; }
+    $('emailAffiche').textContent = email;
+    afficherEtape('etapeAttente');
+  };
+  $('btnRecommencer').onclick = () => { $('champEmail').value = ''; afficherEtape('etapeEmail'); };
+  $('btnDeconnexion').onclick = async () => {
+    clearInterval(minuterie);
+    await sb.auth.signOut();
+    location.reload();
+  };
+
+  async function verifierSession() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { afficherEtape('etapeEmail'); return; }
+    monEmail = session.user.email || '';
+
+    const { data: resp } = await sb.rpc('collecte_est_responsable');
+    estResponsable = !!resp;
+    let mesAcces = [];
+    if (!estResponsable) {
+      const { data } = await sb.from('collecte_acces').select('role, magasin_id, consentement_le').ilike('email', monEmail);
+      mesAcces = data || [];
+      monConsentement = mesAcces.find(a => a.consentement_le)?.consentement_le || null;
+      if (!mesAcces.length) {
+        $('erreurEmail').textContent = "Ce compte n'a pas d'accès à l'espace collecte.";
+        await sb.auth.signOut();
+        afficherEtape('etapeEmail');
+        return;
+      }
+    }
+
+    $('ecranLogin').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    $('badgeRole').textContent = estResponsable ? 'Responsable' : 'Référent magasin';
+    $('texteQui').textContent = monEmail;
+    $('ongletMagasins').classList.toggle('hidden', !estResponsable);
+    $('ongletTournees').classList.toggle('hidden', !estResponsable);
+
+    await chargerTout();
+    // Actualisation automatique toutes les 60 s (sauf fenêtre ouverte ou onglet caché)
+    minuterie = setInterval(() => {
+      if (!creneauOuvert && !document.hidden && !$('vue-tableau').classList.contains('hidden')) chargerTout(true);
+    }, 60000);
+  }
+
+  // ---------- Onglets ----------
+  document.querySelectorAll('#onglets button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#onglets button').forEach(x => x.classList.toggle('active', x === b));
+    ['tableau', 'tournees', 'magasins'].forEach(v => $('vue-' + v).classList.toggle('hidden', v !== b.dataset.vue));
+    if (b.dataset.vue === 'magasins') chargerMagasins();
+    if (b.dataset.vue === 'tournees') chargerTournees();
+  });
+
+  // ---------- Données ----------
+  async function chargerTout(silencieux) {
+    const [p, c] = await Promise.all([
+      sb.from('collecte_parametres').select('*').eq('id', 1).maybeSingle(),
+      sb.from('collecte_creneaux')
+        .select('id, jour, heure_debut, heure_fin, besoin, magasin_id, collecte_magasins!inner(nom, commune, actif, tournee), collecte_inscriptions(id, nom, telephone, remarque, created_at)')
+        .eq('collecte_magasins.actif', true)
+        .order('jour').order('heure_debut')
+    ]);
+    if (c.error) { if (!silencieux) alert('Erreur de chargement : ' + c.error.message); return; }
+    parametres = p.data;
+    if (estResponsable) {
+      const { data: eq } = await sb.from('collecte_equipages').select('*');
+      equipages = eq || [];
+    }
+    creneaux = c.data || [];
+    creneaux.forEach(x => x.collecte_inscriptions.sort((a, b) => a.created_at.localeCompare(b.created_at)));
+    $('texteMaj').textContent = 'Mis à jour à ' + new Date().toTimeString().slice(0, 5);
+    afficherTableau();
+    if (creneauOuvert) afficherFenetre(creneauOuvert);
+  }
+
+  // ---------- Tableau de bord ----------
+  function afficherTableau() {
+    const jours = [...new Set(creneaux.map(c => c.jour))].sort();
+    if (filtreJour !== 'tous' && !jours.includes(filtreJour)) filtreJour = 'tous';
+
+    // Filtres par jour
+    $('filtresJours').innerHTML = ['tous', ...jours].map(j =>
+      `<button class="filtre ${j === filtreJour ? 'active' : ''}" data-j="${j}">${j === 'tous' ? 'Tous les jours' : jourLong(j)}</button>`
+    ).join('');
+    $('filtresJours').querySelectorAll('button').forEach(b => b.onclick = () => { filtreJour = b.dataset.j; afficherTableau(); });
+
+    // Filtre tournées (liste reconstruite à chaque affichage)
+    const tournees = [...new Set(creneaux.map(c => c.collecte_magasins.tournee).filter(t => t != null))].sort((a, b) => a - b);
+    const sansTournee = creneaux.some(c => c.collecte_magasins.tournee == null);
+    if (filtreTournee !== 'toutes' && filtreTournee !== 'aucune' && !tournees.includes(+filtreTournee)) filtreTournee = 'toutes';
+    $('filtreTournee').innerHTML = '<option value="toutes">Toutes les tournées</option>'
+      + tournees.map(t => `<option value="${t}">Tournée ${t}</option>`).join('')
+      + (sansTournee ? '<option value="aucune">Sans tournée</option>' : '');
+    $('filtreTournee').value = filtreTournee;
+    $('filtreTournee').classList.toggle('hidden', !tournees.length);
+
+    afficherBandeaux();
+    const visibles = filtrerCreneaux();
+
+    // Résumé
+    const compte = { vide: 0, incomplet: 0, complet: 0 };
+    let inscrits = 0, besoin = 0;
+    visibles.forEach(c => {
+      const s = statut(c); if (compte[s] !== undefined) compte[s]++;
+      inscrits += c.collecte_inscriptions.length; besoin += c.besoin;
+    });
+    $('resume').innerHTML = `
+      <div class="carte vide"><div class="nb">${compte.vide}</div><div class="lib">créneaux sans personne</div></div>
+      <div class="carte incomplet"><div class="nb">${compte.incomplet}</div><div class="lib">créneaux incomplets</div></div>
+      <div class="carte complet"><div class="nb">${compte.complet}</div><div class="lib">créneaux complets</div></div>
+      <div class="carte"><div class="nb">${inscrits} / ${besoin}</div><div class="lib">places pourvues</div></div>`;
+
+    if (!visibles.length) {
+      $('grille').innerHTML = `<tr><td style="padding:24px; color:var(--ink-soft);">${estResponsable ? 'Aucun magasin pour l\'instant : ajoute-les dans l\'onglet « Magasins & accès ».' : 'Aucun créneau à afficher.'}</td></tr>`;
+      return;
+    }
+
+    // Colonnes : (jour, heure) ; lignes : magasins
+    const colonnes = [];
+    [...new Set(visibles.map(c => c.jour))].sort().forEach(j => {
+      [...new Set(visibles.filter(c => c.jour === j).map(c => c.heure_debut))].sort()
+        .forEach((h, i) => colonnes.push({ jour: j, heure: h, premier: i === 0 }));
+    });
+    const magasins = {};
+    visibles.forEach(c => { magasins[c.magasin_id] = c.collecte_magasins; });
+    const ordre = Object.keys(magasins).sort((a, b) => ordreMagasins(magasins[a], magasins[b]));
+    const index = {};
+    visibles.forEach(c => { index[`${c.magasin_id}|${c.jour}|${c.heure_debut}`] = c; });
+
+    let html = '<thead><tr><th rowspan="2">Magasin</th>';
+    [...new Set(colonnes.map(c => c.jour))].forEach(j => {
+      html += `<th class="jour sep" colspan="${colonnes.filter(c => c.jour === j).length}">${jourLong(j)}</th>`;
+    });
+    html += '</tr><tr>' + colonnes.map(c => `<th class="${c.premier ? 'sep' : ''}">${heure(c.heure)}</th>`).join('') + '</tr></thead><tbody>';
+    ordre.forEach(mid => {
+      const m = magasins[mid];
+      html += `<tr><td class="magasin">${badgeTournee(m.tournee)}${esc(m.nom)}<span class="commune">${esc(m.commune)}</span></td>`;
+      colonnes.forEach(col => {
+        const c = index[`${mid}|${col.jour}|${col.heure}`];
+        if (!c) { html += `<td class="${col.premier ? 'sep' : ''}"></td>`; return; }
+        const noms = c.collecte_inscriptions.map(i => i.nom).join(', ');
+        html += `<td class="cell ${statut(c)} ${col.premier ? 'sep' : ''}" data-id="${c.id}" title="${esc(noms || 'Personne')}">${c.collecte_inscriptions.length}/${c.besoin}</td>`;
+      });
+      html += '</tr>';
+    });
+    $('grille').innerHTML = html + '</tbody>';
+    $('grille').querySelectorAll('td.cell').forEach(td => td.onclick = () => afficherFenetre(td.dataset.id));
+  }
+
+  // ---------- Bandeaux : clôture, rappel, accord du référent ----------
+  const cloturee = () => !!parametres?.cloturee_le;
+  function afficherBandeaux() {
+    let html = '';
+    if (cloturee()) {
+      html += `<div class="bandeau info">Collecte clôturée le ${new Date(parametres.cloturee_le).toLocaleDateString('fr-FR')} : les noms et téléphones des bénévoles ont été effacés. La grille ne montre plus que le bilan, sans nom.</div>`;
+    } else if (estResponsable && parametres?.jours?.length) {
+      const fin = new Date(parametres.jours[parametres.jours.length - 1] + 'T23:59:59');
+      const jours = Math.floor((Date.now() - fin) / 86400000);
+      if (jours >= 1) html += `<div class="bandeau alerte">La collecte est terminée depuis ${jours} jour(s). Pense à la <b>clôturer</b> (onglet « Magasins &amp; accès ») pour effacer les données personnelles des bénévoles.</div>`;
+    }
+    if (estResponsable && !cloturee()) {
+      const { total, complets } = etatEquipages();
+      if (total && complets < total) html += `<div class="bandeau alerte">Équipages : <b>${complets} sur ${total}</b> complets (camion + 2 chauffeurs). <a href="#" id="lienTournees">Compléter dans l'onglet « Tournées &amp; chauffeurs »</a>.</div>`;
+    }
+    if (!estResponsable && !cloturee()) {
+      html += `<div class="bandeau ${monConsentement ? 'info' : 'alerte'}"><label>
+        <input type="checkbox" id="caseConsentement" ${monConsentement ? 'checked' : ''}>
+        <span>J'accepte que la Banque Alimentaire conserve mon adresse email et le ou les magasins dont je m'occupe <b>jusqu'à la prochaine collecte</b>, pour pouvoir m'y réinviter directement. Sans cet accord, mon accès sera supprimé à la clôture de cette collecte. Je peux changer d'avis à tout moment. <a href="confidentialite-collecte.html" target="_blank">Politique de confidentialité</a></span>
+      </label></div>`;
+    }
+    $('bandeaux').innerHTML = html;
+    if ($('lienTournees')) $('lienTournees').onclick = e => { e.preventDefault(); $('ongletTournees').click(); };
+    const caseC = $('caseConsentement');
+    if (caseC) caseC.onchange = async () => {
+      const { data, error } = await sb.rpc('collecte_mon_consentement', { p_accord: caseC.checked });
+      if (error) { alert('Erreur : ' + error.message); caseC.checked = !caseC.checked; return; }
+      monConsentement = data;
+      showToast(caseC.checked ? 'Accord enregistré, merci.' : 'Accord retiré : ton accès sera supprimé à la clôture.');
+      afficherBandeaux();
+    };
+  }
+
+  $('btnRafraichir').onclick = () => chargerTout();
+  $('filtreTournee').onchange = () => { filtreTournee = $('filtreTournee').value; afficherTableau(); };
+
+  // ---------- Fenêtre créneau ----------
+  function afficherFenetre(id) {
+    const c = creneaux.find(x => x.id === id);
+    if (!c) { fermerFenetre(); return; }
+    const premiereOuverture = creneauOuvert !== id;
+    creneauOuvert = id;
+    $('fenMagasin').textContent = `${c.collecte_magasins.nom}${c.collecte_magasins.commune ? ' — ' + c.collecte_magasins.commune : ''}`;
+    $('fenQuand').textContent = `${jourLong(c.jour)}, ${heure(c.heure_debut)} – ${heure(c.heure_fin)} · ${c.collecte_inscriptions.length} inscrit(s) sur ${c.besoin}`;
+
+    const liste = $('fenListe');
+    if (cloturee()) {
+      liste.innerHTML = `<div class="bandeau info">${c.collecte_inscriptions.length} bénévole(s) inscrit(s). Noms et téléphones effacés à la clôture de la collecte.</div>`;
+    } else if (!c.collecte_inscriptions.length) {
+      liste.innerHTML = '<div style="font-size:14px; color:var(--danger); margin-bottom:8px;">Personne pour l\'instant.</div>';
+    } else {
+      liste.innerHTML = c.collecte_inscriptions.map(i => `
+        <div class="inscrit">
+          <div>
+            <div class="nom">${esc(i.nom)}</div>
+            <div class="detail">${i.telephone ? `<a href="tel:${esc(i.telephone.replace(/\s/g, ''))}">${esc(i.telephone)}</a>` : ''}${i.remarque ? ' · ' + esc(i.remarque) : ''}</div>
+          </div>
+          <button class="btn-link" data-id="${i.id}">Retirer</button>
+        </div>`).join('');
+      liste.querySelectorAll('button').forEach(b => b.onclick = async () => {
+        const nom = c.collecte_inscriptions.find(i => i.id === b.dataset.id)?.nom;
+        if (!confirm(`Retirer ${nom} de ce créneau ?`)) return;
+        const { error } = await sb.from('collecte_inscriptions').delete().eq('id', b.dataset.id);
+        if (error) { alert('Suppression impossible : ' + error.message); return; }
+        showToast('Retiré du créneau.');
+        await chargerTout();
+      });
+    }
+
+    $('fenBesoinZone').classList.toggle('hidden', !estResponsable || cloturee());
+    const complet = c.collecte_inscriptions.length >= c.besoin || cloturee();
+    $('fenComplet').classList.toggle('hidden', !complet || cloturee());
+    $('fenAjoutZone').classList.toggle('hidden', complet);
+    $('fenBtnAjouter').classList.toggle('hidden', complet);
+    if (premiereOuverture) {
+      $('fenBesoin').value = c.besoin;
+      $('fenNom').value = ''; $('fenTel').value = ''; $('fenRemarque').value = '';
+      $('fenErreur').textContent = '';
+    }
+    $('fenetre').classList.remove('hidden');
+    if (premiereOuverture && !complet) setTimeout(() => $('fenNom').focus(), 50);
+  }
+  function fermerFenetre() { creneauOuvert = null; $('fenetre').classList.add('hidden'); }
+  $('fenBtnFermer').onclick = fermerFenetre;
+  $('fenetre').onclick = e => { if (e.target.id === 'fenetre') fermerFenetre(); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && creneauOuvert) fermerFenetre(); });
+
+  $('fenBtnAjouter').onclick = async () => {
+    const nom = $('fenNom').value.trim();
+    const telephone = $('fenTel').value.trim() || null;
+    const remarque = $('fenRemarque').value.trim() || null;
+    if (!nom) { $('fenErreur').textContent = 'Le nom est obligatoire.'; return; }
+    const c = creneaux.find(x => x.id === creneauOuvert);
+    if (c && c.collecte_inscriptions.some(i => i.nom.toLowerCase() === nom.toLowerCase())
+        && !confirm(`${nom} est déjà inscrit(e) sur ce créneau. L'ajouter quand même ?`)) return;
+
+    $('fenBtnAjouter').disabled = true;
+    const { error } = await sb.from('collecte_inscriptions').insert({ creneau_id: creneauOuvert, nom, telephone, remarque });
+    $('fenBtnAjouter').disabled = false;
+    if (error) {
+      $('fenErreur').textContent = error.message.includes('complet')
+        ? 'Ce créneau vient d\'être complété par quelqu\'un d\'autre.' : 'Enregistrement impossible : ' + error.message;
+      await chargerTout(); return;
+    }
+    $('fenNom').value = ''; $('fenTel').value = ''; $('fenRemarque').value = ''; $('fenErreur').textContent = '';
+    showToast(`${nom} ajouté(e).`);
+    await chargerTout();
+    $('fenNom').focus();
+  };
+  ['fenNom', 'fenTel', 'fenRemarque'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') $('fenBtnAjouter').click(); }));
+
+  $('fenBtnBesoin').onclick = async () => {
+    const besoin = parseInt($('fenBesoin').value, 10);
+    if (isNaN(besoin) || besoin < 0 || besoin > 2) { alert('Besoin entre 0 et 2 (2 bénévoles maximum par créneau).'); return; }
+    const { error } = await sb.from('collecte_creneaux').update({ besoin }).eq('id', creneauOuvert);
+    if (error) { alert(error.message); return; }
+    showToast('Besoin modifié.');
+    await chargerTout();
+  };
+
+  // ---------- Impression : une fiche par magasin ----------
+  $('btnImprimer').onclick = () => {
+    const visibles = filtrerCreneaux();
+    const parMagasin = {};
+    visibles.forEach(c => { (parMagasin[c.magasin_id] ||= { m: c.collecte_magasins, c: [] }).c.push(c); });
+    const jours = [...new Set(visibles.map(c => c.jour))].sort();
+    let html = '';
+    Object.values(parMagasin)
+      .sort((a, b) => ordreMagasins(a.m, b.m))
+      .forEach(({ m, c }) => {
+        const heures = [...new Set(c.map(x => x.heure_debut))].sort();
+        html += `<div class="fiche"><h1>Collecte — ${esc(m.nom)} ${esc(m.commune || '')}${m.tournee ? ' · Tournée ' + m.tournee : ''}</h1>
+          <div class="s">Banque Alimentaire des Côtes d'Armor · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>
+          <table><tr><th>Créneau</th>${jours.map(j => `<th>${jourLong(j)}</th>`).join('')}</tr>`;
+        heures.forEach(h => {
+          const fin = c.find(x => x.heure_debut === h)?.heure_fin;
+          html += `<tr><td class="h">${heure(h)} – ${heure(fin)}</td>`;
+          jours.forEach(j => {
+            const cr = c.find(x => x.jour === j && x.heure_debut === h);
+            if (!cr) { html += '<td></td>'; return; }
+            const lignes = cr.collecte_inscriptions.map(i => `${esc(i.nom)}${i.telephone ? ' — ' + esc(i.telephone) : ''}`);
+            const manque = cr.besoin - cr.collecte_inscriptions.length;
+            if (manque > 0) lignes.push(`<span class="manque">${manque} place(s) à pourvoir</span>`);
+            html += `<td>${lignes.join('<br>')}</td>`;
+          });
+          html += '</tr>';
+        });
+        html += '</table></div>';
+      });
+    $('impression').innerHTML = html;
+    window.print();
+  };
+
+  // ---------- Impression : feuille des tournées pour les chauffeurs ----------
+  // ---------- Tournées & chauffeurs (responsable) ----------
+  // Tournées = numéros portés par les magasins actifs (tableau de bord)
+  function tourneesActives() {
+    const t = {};
+    creneaux.forEach(c => { const m = c.collecte_magasins; if (m.tournee != null) (t[m.tournee] ||= {})[c.magasin_id] = m; });
+    return Object.keys(t).map(Number).sort((a, b) => a - b).map(n => ({ n, magasins: Object.values(t[n]).sort(ordreMagasins) }));
+  }
+  const equipageDe = (n, jour) => equipages.find(e => e.tournee === n && e.jour === jour);
+  const estComplet = e => !!(e && e.camion && e.chauffeur_1 && e.chauffeur_2);
+  function etatEquipages() {
+    const jours = parametres?.jours || [];
+    let total = 0, complets = 0;
+    tourneesActives().forEach(t => jours.forEach(j => { total++; if (estComplet(equipageDe(t.n, j))) complets++; }));
+    return { total, complets };
+  }
+  const nomChauffeur = id => { const c = chauffeurs.find(x => x.id === id); return c ? `${c.nom} ${c.prenom}` : ''; };
+
+  async function chargerTournees() {
+    const [c, e] = await Promise.all([sb.rpc('collecte_liste_chauffeurs'), sb.from('collecte_equipages').select('*')]);
+    if (c.error || e.error) { alert('Erreur de chargement : ' + (c.error || e.error).message); return; }
+    chauffeurs = c.data || []; equipages = e.data || [];
+    afficherTournees();
+  }
+
+  function afficherTournees() {
+    const jours = parametres?.jours || [];
+    const tournees = tourneesActives();
+    if (cloturee()) {
+      $('resumeTournees').innerHTML = '<div class="bandeau info">Collecte clôturée : les affectations des chauffeurs et des camions ont été effacées.</div>';
+      $('listeTournees').innerHTML = ''; return;
+    }
+    if (!tournees.length) {
+      $('resumeTournees').innerHTML = '<div class="bandeau alerte">Aucune tournée pour l\'instant : indique un n° de tournée sur les magasins (onglet « Magasins &amp; accès »).</div>';
+      $('listeTournees').innerHTML = ''; return;
+    }
+    const { total, complets } = etatEquipages();
+    $('resumeTournees').innerHTML = `<div class="bandeau ${complets === total ? 'info' : 'alerte'}">Équipages complets : <b>${complets} sur ${total}</b>${chauffeurs.length ? ` · ${chauffeurs.length} chauffeur(s) qualifié(s) disponible(s)` : ' · aucun bénévole qualifié « Chauffeur » trouvé dans l\'outil de pointage'}.</div>`;
+    $('listeCamions').innerHTML = [...new Set(equipages.map(e => e.camion).filter(Boolean))].sort().map(c => `<option value="${esc(c)}">`).join('');
+
+    const options = (jour, tournee, valeur) => {
+      const pris = {};   // chauffeur -> tournée qui l'utilise déjà ce jour-là
+      equipages.filter(e => e.jour === jour && e.tournee !== tournee).forEach(e => { [e.chauffeur_1, e.chauffeur_2].forEach(id => { if (id) pris[id] = e.tournee; }); });
+      return '<option value="">— choisir —</option>' + chauffeurs.map(c =>
+        `<option value="${c.id}" ${c.id === valeur ? 'selected' : ''} ${pris[c.id] && c.id !== valeur ? 'disabled' : ''}>${esc(c.nom)} ${esc(c.prenom)}${pris[c.id] ? ' — déjà T' + pris[c.id] : ''}</option>`).join('');
+    };
+
+    $('listeTournees').innerHTML = tournees.map(t => `
+      <div class="carte-tournee">
+        <h3><span class="tournee">T${t.n}</span> Tournée ${t.n}</h3>
+        <div class="mags">${t.magasins.map(m => `${esc(m.nom)}${m.commune ? ' (' + esc(m.commune) + ')' : ''}`).join(' · ')}</div>
+        <table class="equipage">
+          <thead><tr><th>Jour</th><th>Camion</th><th>Chauffeur 1</th><th>Chauffeur 2</th><th></th></tr></thead>
+          <tbody>${jours.map(j => {
+            const e = equipageDe(t.n, j) || {};
+            const etat = estComplet(e) ? '<span class="etat ok">complet</span>' : '<span class="etat invite">incomplet</span>';
+            return `<tr data-tournee="${t.n}" data-jour="${j}">
+              <td class="j">${jourLong(j)}</td>
+              <td><input class="eq-camion" list="listeCamions" value="${esc(e.camion || '')}" placeholder="ex. Master, Iveco…" maxlength="40"></td>
+              <td><select class="eq-c1">${options(j, t.n, e.chauffeur_1)}</select></td>
+              <td><select class="eq-c2">${options(j, t.n, e.chauffeur_2)}</select></td>
+              <td class="etat-eq">${etat}</td></tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>`).join('');
+
+    $('listeTournees').querySelectorAll('tr[data-tournee]').forEach(tr => {
+      tr.querySelectorAll('input, select').forEach(el => el.onchange = () => enregistrerEquipage(tr));
+    });
+  }
+
+  async function enregistrerEquipage(tr) {
+    const tournee = +tr.dataset.tournee, jour = tr.dataset.jour;
+    const valeurs = {
+      camion: tr.querySelector('.eq-camion').value.trim() || null,
+      chauffeur_1: tr.querySelector('.eq-c1').value || null,
+      chauffeur_2: tr.querySelector('.eq-c2').value || null
+    };
+    if (valeurs.chauffeur_1 && valeurs.chauffeur_1 === valeurs.chauffeur_2) {
+      alert('Les deux chauffeurs doivent être différents.'); afficherTournees(); return;
+    }
+    const existant = equipageDe(tournee, jour);
+    const { error } = existant
+      ? await sb.from('collecte_equipages').update(valeurs).eq('id', existant.id)
+      : await sb.from('collecte_equipages').insert({ tournee, jour, ...valeurs });
+    if (error) {
+      alert(/uq_collecte_camion_jour|duplicate/i.test(error.message) ? 'Ce camion fait déjà une autre tournée ce jour-là.'
+        : /check constraint/i.test(error.message) ? 'Les deux chauffeurs doivent être différents.' : error.message);
+    } else showToast(`Tournée ${tournee} · ${jourCourt(jour)} enregistrée.`);
+    await chargerTournees();
+  }
+
+  // ---------- Impression : tableau des chauffeurs (vue d'ensemble) ----------
+  $('btnImprimerChauffeurs').onclick = async () => {
+    await chargerTournees();
+    const jours = parametres?.jours || [];
+    const tournees = tourneesActives();
+    if (!tournees.length) { showToast('Aucune tournée à imprimer.'); return; }
+    const contact = id => {
+      const c = chauffeurs.find(x => x.id === id);
+      return c ? `${esc(c.nom)} ${esc(c.prenom)}${c.telephone ? '<br>' + esc(c.telephone) : ''}` : '<span class="manque">à définir</span>';
+    };
+    const entete = `<div class="s">Banque Alimentaire des Côtes d'Armor · ${jours.map(jourLong).join(' et ')} · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>`;
+
+    // 1. Par jour : une ligne par tournée
+    let html = `<div class="fiche"><h1>Collecte — Tableau des chauffeurs</h1>${entete}`;
+    jours.forEach(j => {
+      html += `<h2>${jourLong(j)}</h2><table class="chauf"><tr><th class="t">Tournée</th><th>Camion</th><th>Chauffeur 1</th><th>Chauffeur 2</th><th>Magasins</th></tr>`;
+      tournees.forEach(t => {
+        const e = equipageDe(t.n, j) || {};
+        html += `<tr><td class="t">T${t.n}</td><td>${esc(e.camion || '') || '<span class="manque">à définir</span>'}</td>
+          <td>${contact(e.chauffeur_1)}</td><td>${contact(e.chauffeur_2)}</td>
+          <td class="mags">${t.magasins.map(m => esc(m.nom) + (m.commune ? ' (' + esc(m.commune) + ')' : '')).join(', ')}</td></tr>`;
+      });
+      html += '</table>';
+    });
+
+    // 2. Par chauffeur : qui roule quand (pour les appeler)
+    const affectes = chauffeurs.filter(c => equipages.some(e => e.chauffeur_1 === c.id || e.chauffeur_2 === c.id));
+    if (affectes.length) {
+      html += `<h2>Chauffeurs affectés</h2><table class="chauf"><tr><th>Chauffeur</th><th class="tel">Téléphone</th>${jours.map(j => `<th class="case">${jourCourt(j)}</th>`).join('')}</tr>`;
+      affectes.forEach(c => {
+        html += `<tr><td>${esc(c.nom)} ${esc(c.prenom)}</td><td>${esc(c.telephone || '')}</td>${jours.map(j => {
+          const e = equipages.find(x => x.jour === j && (x.chauffeur_1 === c.id || x.chauffeur_2 === c.id));
+          return `<td class="case">${e ? 'T' + e.tournee + (e.camion ? '<br>' + esc(e.camion) : '') : '—'}</td>`;
+        }).join('')}</tr>`;
+      });
+      html += '</table>';
+    }
+    $('impression').innerHTML = html + '</div>';
+    window.print();
+  };
+
+  $('btnImprimerTournees').onclick = async () => {
+    if (estResponsable && !cloturee()) {
+      const [c, e] = await Promise.all([sb.rpc('collecte_liste_chauffeurs'), sb.from('collecte_equipages').select('*')]);
+      chauffeurs = c.data || []; equipages = e.data || [];
+    }
+    const telChauffeur = id => chauffeurs.find(x => x.id === id)?.telephone || '';
+    const magasins = {};
+    creneaux.forEach(c => { magasins[c.magasin_id] = c.collecte_magasins; });
+    const liste = Object.values(magasins).sort(ordreMagasins);
+    if (!liste.length) { showToast('Aucun magasin.'); return; }
+    const groupes = {};
+    liste.forEach(m => { (groupes[m.tournee ?? 'aucune'] ||= []).push(m); });
+    const cles = Object.keys(groupes).sort((a, b) => (a === 'aucune') - (b === 'aucune') || a - b);
+    // une page par tournée : chaque camion part avec sa feuille
+    let html = '';
+    cles.forEach(k => {
+      html += `<div class="fiche"><h1>Collecte — ${k === 'aucune' ? 'Magasins sans tournée' : 'Tournée ' + k}</h1>
+        <div class="s">Banque Alimentaire des Côtes d'Armor · ${parametres ? parametres.jours.map(jourLong).join(' et ') : ''} · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>`;
+      if (k !== 'aucune' && estResponsable && !cloturee()) {
+        html += `<table class="eq"><tr><th>Jour</th><th>Camion</th><th>Chauffeurs</th></tr>${(parametres?.jours || []).map(j => {
+          const e = equipageDe(+k, j) || {};
+          const ch = [e.chauffeur_1, e.chauffeur_2].filter(Boolean).map(id => `${esc(nomChauffeur(id))}${telChauffeur(id) ? ' — ' + esc(telChauffeur(id)) : ''}`);
+          return `<tr><td class="j">${jourLong(j)}</td><td>${esc(e.camion || '') || '<span class="manque">à définir</span>'}</td><td>${ch.join('<br>') || '<span class="manque">à définir</span>'}</td></tr>`;
+        }).join('')}</table>`;
+      }
+      html += `<table class="tour"><tr><th class="mag">Magasin</th><th>Commune</th>${(parametres?.jours || []).map(j => `<th class="case">${jourCourt(j)}</th>`).join('')}</tr>`;
+      groupes[k].forEach(m => {
+        html += `<tr><td>${esc(m.nom)}</td><td>${esc(m.commune || '')}</td>${(parametres?.jours || []).map(() => '<td class="case"></td>').join('')}</tr>`;
+      });
+      html += '</table></div>';
+    });
+    $('impression').innerHTML = html;
+    window.print();
+  };
+
+  // ---------- Magasins & accès (responsable) ----------
+  async function chargerMagasins() {
+    const [m, a, e] = await Promise.all([
+      sb.from('collecte_magasins').select('*').order('commune').order('nom'),
+      sb.from('collecte_acces').select('*').order('email'),
+      sb.rpc('collecte_etat_acces')
+    ]);
+    if (m.error || a.error) { alert('Erreur de chargement.'); return; }
+    const magasins = m.data.sort(ordreMagasins), acces = a.data;
+    const connexions = {};
+    (e.data || []).forEach(x => { connexions[x.email] = x.derniere_connexion; });
+    const dateCourte = d => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    // Un accès : email + état (connecté / invité / jamais invité) + boutons
+    const ligneAcces = r => {
+      const co = connexions[r.email.toLowerCase()];
+      const etat = co ? `<span class="etat ok" title="Adresse validée">✓ connecté le ${dateCourte(co)}</span>`
+        : r.invite_le ? `<span class="etat invite" title="Le lien n'a pas encore été utilisé">✉ invité le ${dateCourte(r.invite_le)}</span>`
+        : '<span class="etat rien">pas encore invité</span>';
+      const accord = r.role !== 'referent' ? ''
+        : r.consentement_le ? `<span class="etat garde" title="Accord donné le ${dateCourte(r.consentement_le)}">conservé jusqu'à la prochaine collecte</span>`
+        : '<span class="etat supprime" title="Le référent n\'a pas coché l\'accord de conservation">supprimé à la clôture</span>';
+      return `<div class="acces"><span class="mail">${esc(r.email)}</span>${etat}${accord}
+        <button class="mini" data-inviter="${r.id}" data-email="${esc(r.email)}">${r.invite_le || co ? 'Renvoyer le lien' : 'Envoyer l\'invitation'}</button>
+        <button class="mini suppr" data-acces="${r.id}" title="Retirer l'accès">✕</button></div>`;
+    };
+
+    $('listeMagasins').innerHTML = magasins.map(x => {
+      const refs = acces.filter(r => r.role === 'referent' && r.magasin_id === x.id);
+      return `<tr class="${x.actif ? '' : 'inactif'}">
+        <td><input class="num" type="number" min="1" max="99" value="${x.tournee ?? ''}" data-tournee="${x.id}" placeholder="—" title="N° de tournée"></td>
+        <td><b>${esc(x.nom)}</b></td><td>${esc(x.commune)}</td>
+        <td><input type="number" min="0" max="2" value="${x.besoin_defaut}" data-besoin="${x.id}"></td>
+        <td>${refs.map(ligneAcces).join('') || '<span class="note">—</span>'}</td>
+        <td><input type="checkbox" data-actif="${x.id}" ${x.actif ? 'checked' : ''}></td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="note">Aucun magasin.</td></tr>';
+
+    $('nvRefMagasin').innerHTML = magasins.filter(x => x.actif)
+      .map(x => `<option value="${x.id}">${esc(x.nom)}${x.commune ? ' — ' + esc(x.commune) : ''}</option>`).join('');
+
+    const resp = acces.filter(r => r.role === 'responsable');
+    $('listeResponsables').innerHTML = resp.map(ligneAcces).join('')
+      || '<span class="note">Aucun (hors administrateurs).</span>';
+
+    if (parametres) {
+      $('texteEdition').innerHTML = `Édition en cours : <b>${parametres.jours.map(jourLong).join(' et ')}</b>, créneaux de ${parametres.duree_minutes / 60} h de ${heure(parametres.heure_debut)} à ${heure(parametres.heure_fin)}.`
+        + (parametres.cloturee_le ? ` <b style="color:var(--green);">Clôturée le ${new Date(parametres.cloturee_le).toLocaleDateString('fr-FR')}.</b>` : '');
+      $('zoneCloture').classList.toggle('hidden', !!parametres.cloturee_le);
+    }
+
+    document.querySelectorAll('[data-besoin]').forEach(inp => inp.onchange = async () => {
+      const v = parseInt(inp.value, 10);
+      if (isNaN(v) || v < 0 || v > 2) { alert('Besoin entre 0 et 2 (2 bénévoles maximum par créneau).'); chargerMagasins(); return; }
+      const id = inp.dataset.besoin;
+      const r2 = await sb.from('collecte_creneaux').update({ besoin: v }).eq('magasin_id', id);
+      if (r2.error) { alert(r2.error.message + '\n\nAucune modification faite.'); chargerMagasins(); return; }
+      const r1 = await sb.from('collecte_magasins').update({ besoin_defaut: v }).eq('id', id);
+      if (r1.error) { alert('Erreur lors de la mise à jour.'); return; }
+      showToast('Besoin mis à jour.'); chargerTout(true);
+    });
+    document.querySelectorAll('[data-tournee]').forEach(inp => inp.onchange = async () => {
+      const brut = inp.value.trim();
+      const tournee = brut === '' ? null : parseInt(brut, 10);
+      if (tournee !== null && (isNaN(tournee) || tournee < 1 || tournee > 99)) { alert('N° de tournée entre 1 et 99 (ou vide).'); chargerMagasins(); return; }
+      const { error } = await sb.from('collecte_magasins').update({ tournee }).eq('id', inp.dataset.tournee);
+      if (error) { alert('Erreur : ' + error.message); return; }
+      showToast(tournee ? `Tournée ${tournee} enregistrée.` : 'Tournée retirée.');
+      await chargerTout(true); chargerMagasins();
+    });
+    document.querySelectorAll('[data-actif]').forEach(cb => cb.onchange = async () => {
+      const { error } = await sb.from('collecte_magasins').update({ actif: cb.checked }).eq('id', cb.dataset.actif);
+      if (error) { alert('Erreur : ' + error.message); return; }
+      if (cb.checked) await sb.rpc('collecte_generer_creneaux');
+      showToast(cb.checked ? 'Magasin réactivé.' : 'Magasin désactivé.');
+      await chargerTout(true); chargerMagasins();
+    });
+    document.querySelectorAll('[data-inviter]').forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      if (await envoyerInvitation(b.dataset.inviter, b.dataset.email)) chargerMagasins();
+      else b.disabled = false;
+    });
+    document.querySelectorAll('[data-acces]').forEach(b => b.onclick = async () => {
+      if (!confirm("Retirer cet accès ?")) return;
+      const { error } = await sb.from('collecte_acces').delete().eq('id', b.dataset.acces);
+      if (error) { alert('Erreur : ' + error.message); return; }
+      showToast('Accès retiré.'); chargerMagasins();
+    });
+  }
+
+  $('btnAjouterMagasin').onclick = async () => {
+    const nom = $('nvMagNom').value.trim(), commune = $('nvMagCommune').value.trim() || null;
+    const besoin_defaut = parseInt($('nvMagBesoin').value, 10);
+    const tBrut = $('nvMagTournee').value.trim();
+    const tournee = tBrut === '' ? null : parseInt(tBrut, 10);
+    if (!nom) { alert('Le nom du magasin est obligatoire.'); return; }
+    if (tournee !== null && (isNaN(tournee) || tournee < 1 || tournee > 99)) { alert('N° de tournée entre 1 et 99 (ou vide).'); return; }
+    if (isNaN(besoin_defaut) || besoin_defaut < 0 || besoin_defaut > 2) { alert('Besoin entre 0 et 2 (2 bénévoles maximum par créneau).'); return; }
+    const { error } = await sb.from('collecte_magasins').insert({ nom, commune, besoin_defaut, tournee });
+    if (error) { alert('Erreur : ' + error.message); return; }
+    $('nvMagNom').value = ''; $('nvMagCommune').value = ''; $('nvMagTournee').value = '';
+    showToast(`${nom} ajouté, créneaux créés.`);
+    await chargerTout(true); chargerMagasins();
+  };
+
+  async function ajouterAcces(email, role, magasin_id) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Adresse email invalide.'); return false; }
+    email = email.toLowerCase();
+    const { data, error } = await sb.from('collecte_acces').insert({ email, role, magasin_id }).select('id').single();
+    if (error) { alert(error.code === '23505' ? 'Cet accès existe déjà.' : 'Erreur : ' + error.message); return false; }
+    await envoyerInvitation(data.id, email);
+    return true;
+  }
+
+  // Envoie un lien magique vers cette page à l'adresse déclarée.
+  // L'adresse est « validée » quand la personne clique dessus (état ✓ connecté).
+  async function envoyerInvitation(idAcces, email) {
+    const { error } = await sbInvitation.auth.signInWithOtp({ email, options: { emailRedirectTo: URL_COLLECTE } });
+    if (error) {
+      const msg = /rate|seconds|limit/i.test(error.message)
+        ? "Trop d'envois rapprochés : réessaie dans une minute."
+        : /signups? not allowed/i.test(error.message)
+          ? "Les nouvelles inscriptions sont désactivées dans Supabase : invite d'abord cette adresse depuis le tableau de bord Supabase (Authentication → Users → Invite)."
+          : "Envoi impossible : " + error.message;
+      alert(`Invitation non envoyée à ${email}.\n\n${msg}`);
+      return false;
+    }
+    await sb.from('collecte_acces').update({ invite_le: new Date().toISOString() }).eq('id', idAcces);
+    showToast(`Lien envoyé à ${email}.`);
+    return true;
+  }
+  $('btnAjouterReferent').onclick = async () => {
+    const magasin = $('nvRefMagasin').value;
+    if (!magasin) { alert("Ajoute d'abord un magasin."); return; }
+    if (await ajouterAcces($('nvRefEmail').value.trim(), 'referent', magasin)) {
+      $('nvRefEmail').value = ''; chargerMagasins();
+    }
+  };
+  $('btnAjouterResponsable').onclick = async () => {
+    if (await ajouterAcces($('nvRespEmail').value.trim(), 'responsable', null)) {
+      $('nvRespEmail').value = ''; chargerMagasins();
+    }
+  };
+
+  $('btnCloturer').onclick = async () => {
+    const nbInscrits = creneaux.reduce((n, c) => n + c.collecte_inscriptions.length, 0);
+    const { data: acces } = await sb.from('collecte_acces').select('email, consentement_le').eq('role', 'referent');
+    const sansAccord = [...new Set((acces || []).filter(a => !a.consentement_le).map(a => a.email))];
+    if (!confirm(`Clôturer la collecte ?\n\n• ${nbInscrits} inscription(s) : noms, téléphones et remarques effacés définitivement (le nombre d'inscrits par créneau est gardé).\n• ${sansAccord.length} référent(s) sans accord de conservation supprimé(s)${sansAccord.length ? ' :\n   ' + sansAccord.join('\n   ') : ''}.\n\nCette opération est irréversible. Pense à imprimer les fiches avant si tu en as besoin.`)) return;
+    const { data, error } = await sb.rpc('collecte_cloturer');
+    if (error) { alert('Erreur : ' + error.message); return; }
+    showToast(`Collecte clôturée : ${data.inscriptions} inscription(s) effacée(s), ${data.acces} accès supprimé(s).`);
+    await chargerTout(true); chargerMagasins();
+  };
+
+  $('btnNouvelleEdition').onclick = async () => {
+    const jours = [$('nvJour1').value, $('nvJour2').value].filter(Boolean).sort();
+    if (!jours.length) { alert('Indique au moins un jour.'); return; }
+    if (!cloturee() && creneaux.some(c => c.collecte_inscriptions.length)) { alert("Clôture d'abord la collecte en cours : c'est elle qui efface les données personnelles."); return; }
+    if (!confirm(`Démarrer la collecte du ${jours.map(jourLong).join(' et ')} ?\n\nLe bilan de la collecte précédente sera effacé et les référents devront redonner leur accord de conservation.`)) return;
+    const { data, error } = await sb.rpc('collecte_nouvelle_edition', { p_jours: jours });
+    if (error) { alert('Erreur : ' + error.message); return; }
+    showToast(`Nouvelle édition prête : ${data} créneaux créés.`);
+    await chargerTout(true); chargerMagasins();
+  };
+
+  verifierSession();
+</script>
+</body>
+</html>
