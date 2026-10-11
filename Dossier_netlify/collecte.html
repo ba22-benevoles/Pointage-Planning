@@ -95,6 +95,20 @@
   table.equipage input:focus, table.equipage select:focus { border-color: var(--green); outline: none; }
   table.equipage td.etat-eq { width: 90px; text-align: center; }
   @media (max-width: 760px) { table.equipage, table.equipage tbody, table.equipage tr, table.equipage td { display: block; width: auto !important; } table.equipage thead { display: none; } table.equipage td.j { padding-top: 12px; } }
+  /* --- Groupes pliables par tournée --- */
+  tr.groupe td { background: var(--green-soft); text-align: left !important; cursor: pointer; user-select: none; padding: 9px 12px !important; border-left: none !important; position: static !important; }
+  tr.groupe:hover td { background: #D6E2D4; }
+  tr.groupe .titre-g { font-weight: 700; color: var(--green); font-size: 14px; }
+  tr.groupe .info-g { font-size: 12px; color: var(--ink-soft); font-weight: 600; margin-left: 8px; }
+  .chevron { display: inline-block; width: 16px; color: var(--green); transition: transform 0.15s; }
+  tr.groupe.ouvert .chevron { transform: rotate(90deg); }
+  .pastille { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
+  .pastille.vide { background: var(--danger-soft); color: var(--danger); }
+  .pastille.incomplet { background: var(--amber-soft); color: #8A5C16; }
+  .pastille.complet { background: #FFFFFF; color: var(--green); }
+  tr.plie { display: none; }
+  .plis { font-size: 13px; }
+  .plis button { background: none; border: none; color: var(--green); text-decoration: underline; cursor: pointer; font-family: inherit; font-size: 13px; padding: 2px 4px; }
   /* --- Fenêtre créneau --- */
   .overlay { position: fixed; inset: 0; background: rgba(35,38,31,0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
   .modal { background: var(--panel); border-radius: 16px; padding: 24px; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; }
@@ -216,6 +230,7 @@
         <div id="filtresJours" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
         <select id="filtreTournee" title="Filtrer par tournée"></select>
         <span class="espace"></span>
+        <span class="plis hidden" id="plisTdb"><button data-plis="ouvrir">Tout déplier</button>·<button data-plis="fermer">Tout replier</button></span>
         <span class="maj" id="texteMaj"></span>
         <button class="btn btn-secondary btn-small" id="btnRafraichir">↻ Actualiser</button>
         <button class="btn btn-secondary btn-small" id="btnImprimer" title="Une fiche par magasin avec les noms">🖨 Fiches magasins</button>
@@ -240,7 +255,8 @@
     <!-- Magasins & accès (responsable uniquement) -->
     <section id="vue-magasins" class="hidden">
       <div class="bloc">
-        <h3>Magasins</h3>
+        <h3 style="display:flex; justify-content:space-between; align-items:center;">Magasins
+          <span class="plis hidden" id="plisMag" style="font-weight:400;"><button data-plis="ouvrir">Tout déplier</button>·<button data-plis="fermer">Tout replier</button></span></h3>
         <table class="liste">
           <thead><tr><th>Tournée</th><th>Magasin</th><th>Commune</th><th>Besoin / créneau</th><th>Référents</th><th>Actif</th></tr></thead>
           <tbody id="listeMagasins"></tbody>
@@ -367,6 +383,30 @@
     return (a.tournee ?? 999) - (b.tournee ?? 999)
       || (a.commune || '').localeCompare(b.commune || '') || a.nom.localeCompare(b.nom);
   }
+  // ---- Groupes pliables par tournée (état mémorisé dans ce navigateur)
+  const PLIS_CLE = 'collecte_plis';
+  let plis = (() => { try { return JSON.parse(localStorage.getItem(PLIS_CLE)) || {}; } catch (e) { return {}; } })();
+  const estPlie = (zone, k, defaut) => (plis[zone + ':' + k] === undefined ? defaut : plis[zone + ':' + k]);
+  function memoriserPli(zone, k, plie) {
+    plis[zone + ':' + k] = plie;
+    try { localStorage.setItem(PLIS_CLE, JSON.stringify(plis)); } catch (e) { /* stockage indisponible : sans conséquence */ }
+  }
+  const cleTournee = m => (m.tournee == null ? 'aucune' : String(m.tournee));
+  const libelleGroupe = k => (k === 'aucune' ? 'Sans tournée' : k === 'inactifs' ? 'Magasins désactivés' : 'Tournée ' + k);
+  const ordreGroupes = (a, b) => (a === 'inactifs') - (b === 'inactifs') || (a === 'aucune') - (b === 'aucune') || (+a - +b);
+  // Branche les en-têtes de groupe d'un tableau (clic = plier/déplier) et les liens « tout »
+  function activerPlis(zone, table, zoneBoutons, nbGroupes) {
+    $(zoneBoutons).classList.toggle('hidden', nbGroupes < 2);
+    const basculer = (tr, plie) => {
+      tr.classList.toggle('ouvert', !plie);
+      table.querySelectorAll(`tr[data-g="${tr.dataset.groupe}"]`).forEach(r => r.classList.toggle('plie', plie));
+      memoriserPli(zone, tr.dataset.groupe, plie);
+    };
+    table.querySelectorAll('tr.groupe').forEach(tr => tr.onclick = () => basculer(tr, tr.classList.contains('ouvert')));
+    $(zoneBoutons).querySelectorAll('button').forEach(b => b.onclick = () =>
+      table.querySelectorAll('tr.groupe').forEach(tr => basculer(tr, b.dataset.plis === 'fermer')));
+  }
+
   const badgeTournee = t => t ? `<span class="tournee" title="Tournée ${t}">T${t}</span>` : '';
   function filtrerCreneaux() {
     return creneaux.filter(c => (filtreJour === 'tous' || c.jour === filtreJour)
@@ -517,6 +557,7 @@
       <div class="carte"><div class="nb">${inscrits} / ${besoin}</div><div class="lib">places pourvues</div></div>`;
 
     if (!visibles.length) {
+      $('plisTdb').classList.add('hidden');
       $('grille').innerHTML = `<tr><td style="padding:24px; color:var(--ink-soft);">${estResponsable ? 'Aucun magasin pour l\'instant : ajoute-les dans l\'onglet « Magasins & accès ».' : 'Aucun créneau à afficher.'}</td></tr>`;
       return;
     }
@@ -538,9 +579,33 @@
       html += `<th class="jour sep" colspan="${colonnes.filter(c => c.jour === j).length}">${jourLong(j)}</th>`;
     });
     html += '</tr><tr>' + colonnes.map(c => `<th class="${c.premier ? 'sep' : ''}">${heure(c.heure)}</th>`).join('') + '</tr></thead><tbody>';
-    ordre.forEach(mid => {
-      const m = magasins[mid];
-      html += `<tr><td class="magasin">${badgeTournee(m.tournee)}${esc(m.nom)}<span class="commune">${esc(m.commune)}</span></td>`;
+    // Regroupement par tournée : un en-tête pliable par groupe, avec le résumé de ses créneaux
+    const groupes = {};
+    ordre.forEach(mid => { (groupes[cleTournee(magasins[mid])] ||= []).push(mid); });
+    const cles = Object.keys(groupes).sort(ordreGroupes);
+    const avecGroupes = cles.length > 1 && ordre.length > 4;   // inutile pour un référent avec 1 ou 2 magasins
+    const lignesMagasin = {};   // mid -> clé de groupe
+    cles.forEach(k => groupes[k].forEach(mid => { lignesMagasin[mid] = k; }));
+    const ordreGroupe = cles.flatMap(k => groupes[k]);
+    const enTete = k => {
+      const cr = visibles.filter(c => groupes[k].includes(c.magasin_id));
+      const n = { vide: 0, incomplet: 0, complet: 0 };
+      cr.forEach(c => { const s = statut(c); if (n[s] !== undefined) n[s]++; });
+      const insc = cr.reduce((t, c) => t + c.collecte_inscriptions.length, 0), bes = cr.reduce((t, c) => t + c.besoin, 0);
+      const plie = estPlie('tdb', k, true);
+      return `<tr class="groupe ${plie ? '' : 'ouvert'}" data-groupe="${k}"><td colspan="${colonnes.length + 1}">
+        <span class="chevron">▸</span><span class="titre-g">${libelleGroupe(k)}</span>
+        <span class="info-g">${groupes[k].length} magasin${groupes[k].length > 1 ? 's' : ''} · ${insc} / ${bes} places</span>
+        ${n.vide ? `<span class="pastille vide">${n.vide} vide${n.vide > 1 ? 's' : ''}</span>` : ''}
+        ${n.incomplet ? `<span class="pastille incomplet">${n.incomplet} incomplet${n.incomplet > 1 ? 's' : ''}</span>` : ''}
+        ${n.complet ? `<span class="pastille complet">${n.complet} complet${n.complet > 1 ? 's' : ''}</span>` : ''}</td></tr>`;
+    };
+    let groupeCourant = null;
+    ordreGroupe.forEach(mid => {
+      const m = magasins[mid], k = lignesMagasin[mid];
+      if (avecGroupes && k !== groupeCourant) { html += enTete(k); groupeCourant = k; }
+      const plie = avecGroupes && estPlie('tdb', k, true);
+      html += `<tr data-g="${k}" class="${plie ? 'plie' : ''}"><td class="magasin">${badgeTournee(m.tournee)}${esc(m.nom)}<span class="commune">${esc(m.commune)}</span></td>`;
       colonnes.forEach(col => {
         const c = index[`${mid}|${col.jour}|${col.heure}`];
         if (!c) { html += `<td class="${col.premier ? 'sep' : ''}"></td>`; return; }
@@ -551,6 +616,7 @@
     });
     $('grille').innerHTML = html + '</tbody>';
     $('grille').querySelectorAll('td.cell').forEach(td => td.onclick = () => afficherFenetre(td.dataset.id));
+    activerPlis('tdb', $('grille'), 'plisTdb', avecGroupes ? cles.length : 0);
   }
 
   // ---------- Bandeaux : clôture, rappel, accord du référent ----------
@@ -900,15 +966,32 @@
         <button class="mini suppr" data-acces="${r.id}" title="Retirer l'accès">✕</button></div>`;
     };
 
-    $('listeMagasins').innerHTML = magasins.map(x => {
+    // Regroupement par tournée (+ un groupe « désactivés » en fin de liste)
+    const cleMag = x => (x.actif ? cleTournee(x) : 'inactifs');
+    const groupesMag = {};
+    magasins.forEach(x => { (groupesMag[cleMag(x)] ||= []).push(x); });
+    const clesMag = Object.keys(groupesMag).sort(ordreGroupes);
+    const avecGroupesMag = clesMag.length > 1;
+    const enTeteMag = k => {
+      const liste = groupesMag[k];
+      const avecRef = liste.filter(x => acces.some(r => r.role === 'referent' && r.magasin_id === x.id)).length;
+      const plie = estPlie('mag', k, true);
+      return `<tr class="groupe ${plie ? '' : 'ouvert'}" data-groupe="${k}"><td colspan="6">
+        <span class="chevron">▸</span><span class="titre-g">${libelleGroupe(k)}</span>
+        <span class="info-g">${liste.length} magasin${liste.length > 1 ? 's' : ''}</span>
+        ${k === 'inactifs' ? '' : `<span class="pastille ${avecRef === liste.length ? 'complet' : 'incomplet'}">référents : ${avecRef} / ${liste.length}</span>`}</td></tr>`;
+    };
+    $('listeMagasins').innerHTML = clesMag.map(k => (avecGroupesMag ? enTeteMag(k) : '') + groupesMag[k].map(x => {
       const refs = acces.filter(r => r.role === 'referent' && r.magasin_id === x.id);
-      return `<tr class="${x.actif ? '' : 'inactif'}">
+      const plie = avecGroupesMag && estPlie('mag', k, true);
+      return `<tr data-g="${k}" class="${x.actif ? '' : 'inactif'} ${plie ? 'plie' : ''}">
         <td><input class="num" type="number" min="1" max="99" value="${x.tournee ?? ''}" data-tournee="${x.id}" placeholder="—" title="N° de tournée"></td>
         <td><b>${esc(x.nom)}</b></td><td>${esc(x.commune)}</td>
         <td><input type="number" min="0" max="2" value="${x.besoin_defaut}" data-besoin="${x.id}"></td>
         <td>${refs.map(ligneAcces).join('') || '<span class="note">—</span>'}</td>
         <td><input type="checkbox" data-actif="${x.id}" ${x.actif ? 'checked' : ''}></td></tr>`;
-    }).join('') || '<tr><td colspan="6" class="note">Aucun magasin.</td></tr>';
+    }).join('')).join('') || '<tr><td colspan="6" class="note">Aucun magasin.</td></tr>';
+    activerPlis('mag', $('listeMagasins'), 'plisMag', avecGroupesMag ? clesMag.length : 0);
 
     $('nvRefMagasin').innerHTML = magasins.filter(x => x.actif)
       .map(x => `<option value="${x.id}">${esc(x.nom)}${x.commune ? ' — ' + esc(x.commune) : ''}</option>`).join('');
