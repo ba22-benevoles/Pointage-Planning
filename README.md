@@ -27,6 +27,7 @@ Dossier_netlify/
   absence.html                  — espace bénévole autonome (lien magique)
   collecte.html                 — espace collecte (responsables + référents magasin, lien magique)
   aide.html                     — aide en ligne de l'espace admin
+  aide-collecte.html            — aide en ligne de l'espace collecte (référents et responsables)
   confidentialite.html          — politique de confidentialité de l'outil de pointage
   confidentialite-collecte.html — politique de confidentialité de l'espace collecte
 supabase/

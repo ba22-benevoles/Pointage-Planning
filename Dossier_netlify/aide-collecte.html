@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Aide — Espace collecte BA22</title>
+<style>
+  :root {
+    --bg: #F7F4EC; --panel: #FFFFFF; --ink: #23261F; --ink-soft: #6B6A5E;
+    --green: #33513F; --green-soft: #E4EBE3; --line: #E5DFCF; --amber-soft: #F5E6C8;
+    --danger: #B4462F; --danger-soft: #FBEAE4;
+  }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Public Sans','Segoe UI', system-ui, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 40px 24px 60px; }
+  h1 { font-family: Georgia, serif; color: var(--green); font-size: 28px; margin-bottom: 4px; }
+  .sub { color: var(--ink-soft); font-size: 14px; margin-bottom: 24px; }
+  .sommaire { background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 32px; }
+  .sommaire a { display: block; padding: 4px 0; color: var(--green); text-decoration: none; font-size: 14px; }
+  .sommaire a:hover { text-decoration: underline; }
+  .sommaire .groupe { font-size: 12px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 10px; }
+  .sommaire .groupe:first-child { margin-top: 0; }
+  h2 { font-family: Georgia, serif; color: var(--green); font-size: 20px; margin-top: 40px; margin-bottom: 10px; padding: 8px 12px; background: var(--green-soft); border-radius: 8px; }
+  h3 { color: var(--ink); font-size: 15px; margin-top: 20px; margin-bottom: 6px; }
+  ul, ol { padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  .astuce { background: var(--amber-soft); border-left: 4px solid #B4462F; padding: 10px 14px; border-radius: 6px; margin: 12px 0; font-size: 14px; }
+  .pastille { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 6px; padding: 1px 8px; }
+  .p-vide { background: var(--danger-soft); color: var(--danger); }
+  .p-incomplet { background: #F6E9D2; color: #8A5C16; }
+  .p-complet { background: var(--green-soft); color: var(--green); }
+  a { color: var(--green); }
+  .retour { display: inline-block; margin-top: 40px; font-size: 14px; }
+  .pied { margin-top: 30px; font-size: 12px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Aide — Espace collecte</h1>
+  <div class="sub">Organisation des collectes en magasin — Banque Alimentaire de Lannion (BA22)</div>
+
+  <div class="sommaire">
+    <div class="groupe">Pour tout le monde</div>
+    <a href="#connexion">🔑 Se connecter</a>
+    <a href="#couleurs">🟩 Lire la grille des créneaux</a>
+    <div class="groupe">Référents magasin</div>
+    <a href="#referent">🏪 Inscrire les bénévoles de son magasin</a>
+    <a href="#accord">✅ L'accord de conservation</a>
+    <div class="groupe">Responsables de la collecte</div>
+    <a href="#tableau">📊 Tableau de bord</a>
+    <a href="#magasins">🏬 Magasins &amp; accès</a>
+    <a href="#tournees">🚚 Tournées &amp; chauffeurs</a>
+    <a href="#impressions">🖨 Impressions</a>
+    <a href="#cloture">🔒 Après la collecte : clôture et nouvelle édition</a>
+    <div class="groupe">En cas de souci</div>
+    <a href="#questions">❓ Questions fréquentes</a>
+  </div>
+
+  <!-- ===================================================== -->
+  <h2 id="connexion">🔑 Se connecter</h2>
+  <ol>
+    <li>Va sur <strong>pointage.esl22.fr/collecte</strong> et saisis ton adresse email</li>
+    <li>Tu reçois un email « Votre lien de connexion » : clique sur le bouton <strong>Me connecter</strong></li>
+    <li>Tu arrives directement dans l'espace collecte</li>
+  </ol>
+  <p>Il n'y a <strong>pas de mot de passe</strong>. Le lien reçu n'est utilisable qu'une seule fois et pendant un temps limité : pour une prochaine connexion, il suffit de redemander un lien.</p>
+  <div class="astuce">Seules les adresses autorisées par la responsable de la collecte peuvent se connecter. Si ton adresse est refusée, ou si tu ne reçois rien (pense à regarder dans les <strong>courriers indésirables</strong>), contacte la responsable de la collecte.</div>
+
+  <h2 id="couleurs">🟩 Lire la grille des créneaux</h2>
+  <p>Chaque magasin a 5 créneaux de 2 heures par jour (9h, 11h, 13h, 15h, 17h). Chaque case indique <strong>inscrits / besoin</strong>, par exemple <code>1/2</code> :</p>
+  <ul>
+    <li><span class="pastille p-vide">0/2</span> rouge : personne n'est inscrit</li>
+    <li><span class="pastille p-incomplet">1/2</span> orange : il manque quelqu'un</li>
+    <li><span class="pastille p-complet">2/2</span> vert : le créneau est complet</li>
+  </ul>
+  <p>Il y a <strong>2 bénévoles maximum</strong> par créneau (parfois 1 pour un petit magasin). Les boutons au-dessus de la grille permettent de n'afficher qu'un jour.</p>
+
+  <!-- ===================================================== -->
+  <h2 id="referent">🏪 Référents : inscrire les bénévoles de son magasin</h2>
+  <p>En tant que référent, tu ne vois que le ou les magasins qui te sont confiés.</p>
+  <h3>Ajouter un bénévole</h3>
+  <ol>
+    <li>Clique sur la case du créneau voulu</li>
+    <li>Saisis son <strong>nom et prénom</strong>, son <strong>téléphone</strong> (conseillé, pour le joindre en cas d'imprévu) et, si besoin, une remarque (« vient avec sa fille »)</li>
+    <li>Clique sur <strong>Ajouter</strong> (ou appuie sur Entrée) : la case se met à jour</li>
+  </ol>
+  <p>Quand le créneau est complet, le formulaire disparaît. Pour <strong>retirer</strong> quelqu'un, clique sur « Retirer » à côté de son nom.</p>
+  <div class="astuce">La remarque ne doit contenir <strong>aucune information sensible</strong> (santé, situation personnelle…). Préviens le bénévole que son nom et son téléphone servent uniquement à organiser la collecte et sont effacés après celle-ci.</div>
+  <h3>Imprimer la fiche de son magasin</h3>
+  <p>Le bouton <strong>🖨 Fiches magasins</strong> imprime une page par magasin, avec les noms et téléphones par créneau et les places restant à pourvoir. Pense à détruire la feuille après la collecte.</p>
+
+  <h2 id="accord">✅ Référents : l'accord de conservation</h2>
+  <p>En haut de ta page, une case te propose de garder ton adresse email et tes magasins <strong>jusqu'à la prochaine collecte</strong> (il y en a deux par an), pour être réinvité directement sans nouvelle saisie.</p>
+  <ul>
+    <li><strong>Case cochée</strong> : ton accès est conservé jusqu'à la collecte suivante, où l'accord te sera redemandé</li>
+    <li><strong>Case non cochée</strong> : ton accès est supprimé à la clôture de cette collecte</li>
+  </ul>
+  <p>Tu peux changer d'avis à tout moment en cochant ou décochant la case.</p>
+
+  <!-- ===================================================== -->
+  <h2 id="tableau">📊 Responsables : tableau de bord</h2>
+  <ul>
+    <li><strong>Les compteurs</strong> en haut donnent le nombre de créneaux vides, incomplets et complets, et les places pourvues</li>
+    <li><strong>Les magasins sont groupés par tournée.</strong> Chaque ligne « ▸ Tournée 2 » résume son état (places pourvues, pastilles vides / incomplets / complets) ; un clic la déplie ou la replie. « Tout déplier / Tout replier » agit sur toutes les tournées. Le pliage est mémorisé dans ton navigateur</li>
+    <li><strong>Les filtres</strong> permettent de n'afficher qu'un jour, ou qu'une tournée</li>
+    <li><strong>Un clic sur une case</strong> ouvre le créneau : noms et téléphones (cliquables sur téléphone), ajout ou retrait d'un bénévole, et modification du <strong>besoin</strong> de ce seul créneau (0 pour le fermer)</li>
+    <li>La page se met à jour toute seule chaque minute ; le bouton <strong>↻ Actualiser</strong> le fait immédiatement</li>
+  </ul>
+  <div class="astuce">Des bandeaux de rappel s'affichent si des équipages de tournée sont incomplets, ou si la collecte est terminée mais pas encore clôturée.</div>
+
+  <h2 id="magasins">🏬 Responsables : Magasins &amp; accès</h2>
+  <h3>Les magasins</h3>
+  <ul>
+    <li><strong>Ajouter</strong> : nom, commune, besoin par créneau (2, ou 1 pour un petit magasin) et n° de tournée, puis « + Ajouter ». Ses 10 créneaux sont créés automatiquement</li>
+    <li><strong>Modifier</strong> : le nom et la commune se corrigent en cliquant directement dessus ; le n° de tournée et le besoin aussi. Tout est enregistré en quittant le champ</li>
+    <li><strong>Désactiver</strong> (case « Actif » décochée) : le magasin disparaît du tableau de bord et des impressions, mais ses inscriptions et ses référents sont conservés. C'est la bonne solution pour un magasin qui ne participe pas cette fois</li>
+    <li><strong>Supprimer</strong> (🗑) : définitif. S'il a des référents ou des inscriptions, un avertissement les liste et il faut taper <code>SUPPRIMER</code> pour confirmer</li>
+  </ul>
+  <h3>Les référents</h3>
+  <ol>
+    <li>Saisis l'email du référent, choisis son magasin, puis « + Donner l'accès et inviter » : il reçoit aussitôt un lien de connexion</li>
+    <li>Pour un référent qui s'occupe de plusieurs magasins, recommence avec chaque magasin</li>
+  </ol>
+  <p>À côté de chaque adresse, l'état de l'invitation :</p>
+  <ul>
+    <li><strong>pas encore invité</strong> : aucun lien envoyé</li>
+    <li><strong>✉ invité le…</strong> : le lien est parti, mais le référent ne l'a pas encore utilisé</li>
+    <li><strong>✓ connecté le…</strong> : le référent s'est connecté, son adresse est confirmée</li>
+  </ul>
+  <p>Et l'accord de conservation : <strong>conservé jusqu'à la prochaine collecte</strong> ou <strong>supprimé à la clôture</strong>.</p>
+  <div class="astuce">Un référent resté sur « invité » plusieurs jours a sans doute une adresse erronée : vérifie-la avec lui. « Renvoyer le lien » lui renvoie l'invitation ; ✕ lui retire l'accès.</div>
+  <h3>Les responsables de la collecte</h3>
+  <p>Le bloc « Responsables collecte » permet de donner l'accès complet à l'espace collecte à une autre adresse. Les administrateurs de l'outil de pointage sont responsables d'office.</p>
+
+  <h2 id="tournees">🚚 Responsables : Tournées &amp; chauffeurs</h2>
+  <p>Chaque tournée regroupe les magasins portant son numéro. Pour chaque tournée et <strong>chaque jour</strong>, on renseigne le <strong>camion</strong> et ses <strong>2 chauffeurs</strong> ; l'équipage peut changer d'un jour à l'autre. Tout est enregistré automatiquement.</p>
+  <ul>
+    <li>Les chauffeurs proposés sont les bénévoles <strong>actifs</strong> qualifiés « Chauffeur » dans l'outil de pointage</li>
+    <li>Un chauffeur ou un camion ne peut faire qu'<strong>une tournée par jour</strong> : la liste indique « déjà T2 » et l'outil refuse le doublon</li>
+    <li>Chaque ligne affiche <strong>complet</strong> ou <strong>incomplet</strong> (camion + 2 chauffeurs)</li>
+  </ul>
+
+  <h2 id="impressions">🖨 Impressions</h2>
+  <ul>
+    <li><strong>Fiches magasins</strong> (tableau de bord) : une page par magasin, noms et téléphones par créneau, places restantes</li>
+    <li><strong>Tournées chauffeurs</strong> (tableau de bord) : une feuille par tournée, à remettre à chaque camion : équipage, téléphones des chauffeurs, magasins à collecter avec une case à cocher par jour</li>
+    <li><strong>Tableau des chauffeurs</strong> (onglet Tournées &amp; chauffeurs) : une page par jour (tournées, puis chauffeurs du jour par ordre alphabétique) et une page récapitulative</li>
+  </ul>
+  <div class="astuce">Ces feuilles contiennent des noms et des téléphones : pense à les <strong>récupérer et les détruire</strong> après la collecte.</div>
+
+  <h2 id="cloture">🔒 Après la collecte : clôture et nouvelle édition</h2>
+  <h3>Clôturer la collecte</h3>
+  <p>Dans le mois qui suit la collecte, une fois le bilan fait : onglet « Magasins &amp; accès », bloc <strong>Édition</strong>, bouton <strong>Clôturer la collecte</strong>. Cette opération, <strong>irréversible</strong> :</p>
+  <ul>
+    <li>efface les noms, téléphones et remarques des bénévoles inscrits, ainsi que les équipages des tournées (seul reste le nombre d'inscrits par créneau, sans nom)</li>
+    <li>supprime les référents qui n'ont pas donné leur accord de conservation</li>
+    <li>bloque toute nouvelle saisie</li>
+  </ul>
+  <p>Imprime avant ce dont tu pourrais avoir besoin.</p>
+  <h3>Préparer la collecte suivante</h3>
+  <p>Après la clôture : bloc <strong>Édition</strong>, saisis les nouvelles dates, puis « Démarrer une nouvelle édition ». Les créneaux sont recréés ; magasins, tournées, responsables et référents conservés restent en place (ces derniers redonnent leur accord).</p>
+
+  <!-- ===================================================== -->
+  <h2 id="questions">❓ Questions fréquentes</h2>
+  <h3>Je ne reçois pas le lien de connexion</h3>
+  <p>Regarde dans les courriers indésirables, puis vérifie l'adresse saisie. Si elle est refusée, elle n'a pas (ou plus) d'accès : la responsable peut l'ajouter ou renvoyer l'invitation. Deux demandes très rapprochées peuvent être bloquées : attends une minute.</p>
+  <h3>Je ne peux pas ajouter de bénévole sur un créneau</h3>
+  <p>Le créneau est complet (2 maximum, parfois 1), ou la collecte a été clôturée. Si un bénévole s'est désisté, retire-le d'abord.</p>
+  <h3>Un référent ne voit pas un de ses magasins</h3>
+  <p>Il faut lui donner l'accès à chaque magasin séparément, dans « Magasins &amp; accès ». Vérifie aussi que le magasin est bien coché « Actif ».</p>
+  <h3>Un chauffeur n'apparaît pas dans la liste</h3>
+  <p>Il doit être au statut <strong>actif</strong> et avoir le poste <strong>Chauffeur</strong> coché sur sa fiche dans l'outil de pointage : demande-le à un administrateur.</p>
+  <h3>Mes données personnelles</h3>
+  <p>Tout est expliqué dans la page <a href="confidentialite-collecte.html">Données personnelles et confidentialité</a>.</p>
+
+  <a class="retour" href="collecte.html">← Retour à l'espace collecte</a>
+  <div class="pied">© 2026 Banque Alimentaire des Côtes d'Armor</div>
+</div>
+</body>
+</html>

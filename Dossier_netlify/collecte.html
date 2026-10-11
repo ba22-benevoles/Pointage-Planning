@@ -212,7 +212,7 @@
       <div class="sub">Un lien de connexion vient d'être envoyé à <span id="emailAffiche"></span>.<br>Clique dessus pour accéder à l'espace collecte (pense aux spams).</div>
       <button class="btn btn-secondary btn-block" id="btnRecommencer">Changer d'email</button>
     </div>
-    <div class="pied">© 2026 Banque Alimentaire des Côtes d'Armor · <a href="confidentialite-collecte.html" target="_blank">Données personnelles et confidentialité</a></div>
+    <div class="pied"><a href="aide-collecte.html#connexion" target="_blank">❓ Aide</a> · © 2026 Banque Alimentaire des Côtes d'Armor · <a href="confidentialite-collecte.html" target="_blank">Données personnelles et confidentialité</a></div>
   </div>
 </div>
 
@@ -224,7 +224,10 @@
       <span class="titre">Collecte nationale</span>
       <div class="qui" id="texteQui"></div>
     </div>
-    <button class="btn btn-secondary btn-small" id="btnDeconnexion">Se déconnecter</button>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <a class="btn btn-secondary btn-small" id="lienAide" href="aide-collecte.html" target="_blank" style="text-decoration:none;">❓ Aide</a>
+      <button class="btn btn-secondary btn-small" id="btnDeconnexion">Se déconnecter</button>
+    </div>
   </header>
   <nav class="tabs" id="onglets">
     <button class="active" data-vue="tableau">Tableau de bord</button>
@@ -506,6 +509,7 @@
     $('app').classList.remove('hidden');
     $('badgeRole').textContent = estResponsable ? 'Responsable' : 'Référent magasin';
     $('texteQui').textContent = monEmail;
+    $('lienAide').href = 'aide-collecte.html' + (estResponsable ? '#tableau' : '#referent');
     $('ongletMagasins').classList.toggle('hidden', !estResponsable);
     $('ongletTournees').classList.toggle('hidden', !estResponsable);
 
