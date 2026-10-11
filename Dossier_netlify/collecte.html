@@ -292,7 +292,7 @@
           <div class="field"><label>Magasin</label><select id="nvRefMagasin"></select></div>
           <button class="btn btn-primary btn-small" id="btnAjouterReferent">+ Donner l'accès et inviter</button>
         </div>
-        <p class="note">Un lien de connexion lui est envoyé aussitôt par email : il arrive sur cette page et ne voit et ne remplit que la grille de son ou ses magasins (l'ajouter une fois par magasin). Quand il a cliqué sur le lien, son adresse passe à « ✓ connecté ». Resté sur « ✉ invité » après quelques jours : adresse probablement erronée, à vérifier avec lui.</p>
+        <p class="note">Un lien de connexion lui est envoyé aussitôt par email : il arrive sur cette page et ne voit et ne remplit que la grille de son ou ses magasins. Pour un référent de plusieurs magasins, ajoute-le une fois par magasin : seul le premier ajout envoie un email. Quand il a cliqué sur le lien, son adresse passe à « ✓ connecté ». Resté sur « ✉ invité » après quelques jours : adresse probablement erronée, à vérifier avec lui.</p>
       </div>
 
       <div class="bloc">
@@ -1162,9 +1162,18 @@
   async function ajouterAcces(email, role, magasin_id) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Adresse email invalide.'); return false; }
     email = email.toLowerCase();
+    // Cette adresse a-t-elle déjà été invitée (pour un autre magasin, ou comme responsable) ?
+    const { data: deja } = await sb.from('collecte_acces').select('invite_le').ilike('email', email);
+    const derniereInvitation = (deja || []).map(d => d.invite_le).filter(Boolean).sort().pop();
     const { data, error } = await sb.from('collecte_acces').insert({ email, role, magasin_id }).select('id').single();
     if (error) { alert(error.code === '23505' ? 'Cet accès existe déjà.' : 'Erreur : ' + error.message); return false; }
-    await envoyerInvitation(data.id, email);
+    if (derniereInvitation) {
+      // Un seul lien suffit : à sa connexion, la personne voit tous ses magasins. Pas de nouvel email.
+      await sb.from('collecte_acces').update({ invite_le: derniereInvitation }).eq('id', data.id);
+      showToast(`Accès ajouté pour ${email}, sans nouvel email : ce magasin apparaîtra à sa prochaine connexion.`);
+    } else {
+      await envoyerInvitation(data.id, email);
+    }
     return true;
   }
 
