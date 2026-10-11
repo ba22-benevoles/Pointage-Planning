@@ -133,6 +133,10 @@
   table.liste input.txt.nom { font-weight: 700; }
   table.liste input.txt:hover { border-color: var(--line); }
   table.liste input.txt:focus { border-color: var(--green); background: var(--panel); outline: none; }
+  .avert { background: var(--danger-soft); color: var(--danger); border-radius: 10px; padding: 10px 14px; font-size: 14px; margin: 12px 0; line-height: 1.5; }
+  .avert ul { margin: 6px 0 0; padding-left: 20px; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-suppr { background: none; border: none; cursor: pointer; font-size: 15px; padding: 2px 6px; margin-left: 6px; opacity: 0.55; }
   .btn-suppr:hover { opacity: 1; }
   table.liste input[type=number] { width: 60px; padding: 5px; border: 2px solid var(--line); border-radius: 8px; }
@@ -341,6 +345,22 @@
     <div style="display:flex; gap:8px;">
       <button class="btn btn-primary" id="fenBtnAjouter" style="flex:1;">Ajouter</button>
       <button class="btn btn-secondary" id="fenBtnFermer">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation d'une action irréversible (dans la page, pas une fenêtre du navigateur) -->
+<div class="overlay hidden" id="confirmation">
+  <div class="modal">
+    <h2 id="confTitre"></h2>
+    <div id="confTexte" style="font-size:14px;"></div>
+    <div class="field hidden" id="confMotZone" style="margin-top:12px;">
+      <label for="confMot">Pour confirmer, tape <b>SUPPRIMER</b></label>
+      <input id="confMot" autocomplete="off">
+    </div>
+    <div style="display:flex; gap:8px; margin-top:16px;">
+      <button class="btn btn-danger" id="confOui" style="flex:1;">Supprimer</button>
+      <button class="btn btn-secondary" id="confNon">Annuler</button>
     </div>
   </div>
 </div>
@@ -946,6 +966,24 @@
     window.print();
   };
 
+  // ---------- Confirmation d'une suppression (renvoie true si confirmée) ----------
+  function confirmerSuppression(titre, texteHtml, exigerMot) {
+    return new Promise(resolve => {
+      $('confTitre').textContent = titre;
+      $('confTexte').innerHTML = texteHtml;
+      $('confMotZone').classList.toggle('hidden', !exigerMot);
+      $('confMot').value = '';
+      $('confOui').disabled = !!exigerMot;
+      $('confMot').oninput = () => { $('confOui').disabled = $('confMot').value.trim().toUpperCase() !== 'SUPPRIMER'; };
+      const fermer = ok => { $('confirmation').classList.add('hidden'); resolve(ok); };
+      $('confOui').onclick = () => fermer(true);
+      $('confNon').onclick = () => fermer(false);
+      $('confirmation').onclick = e => { if (e.target.id === 'confirmation') fermer(false); };
+      $('confirmation').classList.remove('hidden');
+      setTimeout(() => (exigerMot ? $('confMot') : $('confNon')).focus(), 50);
+    });
+  }
+
   // ---------- Magasins & accès (responsable) ----------
   async function chargerMagasins() {
     const [m, a, e] = await Promise.all([
@@ -1042,16 +1080,16 @@
       const { data: cr } = await sb.from('collecte_creneaux').select('id, collecte_inscriptions(id)').eq('magasin_id', x.id);
       const nbInscr = (cr || []).reduce((t, c) => t + (c.collecte_inscriptions || []).length, 0);
       const nomComplet = `${x.nom}${x.commune ? ' — ' + x.commune : ''}`;
-      let msg = `Supprimer définitivement le magasin « ${nomComplet} » ?`;
-      if (refs.length || nbInscr) {
-        msg += '\n\n⚠ ATTENTION, seront aussi supprimés :';
-        if (refs.length) msg += `\n• l'accès de ${refs.length} référent(s) à ce magasin :\n   ${refs.join('\n   ')}`;
-        if (nbInscr) msg += `\n• ${nbInscr} inscription(s) de bénévoles sur ses créneaux`;
-        msg += '\n\nPour le retirer seulement de la collecte en conservant tout cela, décoche plutôt « Actif ».';
+      const lie = refs.length || nbInscr;
+      let texte = `<p>Le magasin <b>${esc(nomComplet)}</b> et ses créneaux seront définitivement supprimés.</p>`;
+      if (lie) {
+        texte += `<div class="avert"><b>⚠ Attention, seront aussi supprimés :</b><ul>`
+          + (refs.length ? `<li>l'accès de <b>${refs.length} référent${refs.length > 1 ? 's' : ''}</b> à ce magasin : ${refs.map(esc).join(', ')}</li>` : '')
+          + (nbInscr ? `<li><b>${nbInscr} inscription${nbInscr > 1 ? 's' : ''}</b> de bénévoles sur ses créneaux</li>` : '')
+          + `</ul></div><p class="note">Pour le retirer seulement de la collecte en gardant tout cela, décoche plutôt « Actif ».</p>`;
       }
-      msg += '\n\nCette suppression est irréversible.';
-      if (!confirm(msg)) return;
-      if ((refs.length || nbInscr) && prompt(`Pour confirmer, tape SUPPRIMER :`) !== 'SUPPRIMER') { showToast('Suppression annulée.'); return; }
+      texte += '<p class="note">Cette suppression est irréversible.</p>';
+      if (!(await confirmerSuppression('Supprimer ce magasin ?', texte, lie))) { showToast('Suppression annulée.'); return; }
       const { error } = await sb.from('collecte_magasins').delete().eq('id', x.id);
       if (error) { alert('Erreur : ' + error.message); return; }
       showToast(`Magasin « ${x.nom} » supprimé.`);
