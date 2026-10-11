@@ -129,6 +129,12 @@
   table.liste { width: 100%; border-collapse: collapse; font-size: 14px; }
   table.liste th, table.liste td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; vertical-align: top; }
   table.liste th { font-size: 12px; color: var(--ink-soft); }
+  table.liste input.txt { width: 100%; min-width: 110px; padding: 5px 7px; border: 2px solid transparent; border-radius: 8px; background: transparent; font-family: inherit; font-size: 14px; color: var(--ink); }
+  table.liste input.txt.nom { font-weight: 700; }
+  table.liste input.txt:hover { border-color: var(--line); }
+  table.liste input.txt:focus { border-color: var(--green); background: var(--panel); outline: none; }
+  .btn-suppr { background: none; border: none; cursor: pointer; font-size: 15px; padding: 2px 6px; margin-left: 6px; opacity: 0.55; }
+  .btn-suppr:hover { opacity: 1; }
   table.liste input[type=number] { width: 60px; padding: 5px; border: 2px solid var(--line); border-radius: 8px; }
   .tag { display: inline-flex; align-items: center; gap: 4px; background: var(--amber-soft); color: #8A5C16; font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 999px; margin: 2px 4px 2px 0; }
   .tag button { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 13px; padding: 0 2px; }
@@ -268,7 +274,7 @@
           <div class="field" style="max-width:120px;"><label>Tournée</label><input id="nvMagTournee" type="number" min="1" max="99" placeholder="ex. 1"></div>
           <button class="btn btn-primary btn-small" id="btnAjouterMagasin">+ Ajouter</button>
         </div>
-        <p class="note">2 bénévoles maximum par créneau (mettre 1 pour un petit magasin, 0 pour fermer un créneau). Le n° de tournée indique aux chauffeurs les magasins à collecter sur leur tournée (modifiable à tout moment, vide = pas encore affecté). Les créneaux d'un nouveau magasin sont créés automatiquement. Modifier le besoin ici change le besoin par défaut <i>et</i> celui de tous ses créneaux. Un magasin désactivé disparaît du tableau de bord sans perdre ses inscriptions.</p>
+        <p class="note">2 bénévoles maximum par créneau (mettre 1 pour un petit magasin, 0 pour fermer un créneau). Le n° de tournée indique aux chauffeurs les magasins à collecter sur leur tournée (modifiable à tout moment, vide = pas encore affecté). Les créneaux d'un nouveau magasin sont créés automatiquement. Modifier le besoin ici change le besoin par défaut <i>et</i> celui de tous ses créneaux. Un magasin désactivé disparaît du tableau de bord sans perdre ses inscriptions. Nom et commune se corrigent en cliquant dessus ; 🗑 supprime définitivement le magasin, avec ses créneaux, ses inscriptions et l'accès de ses référents.</p>
       </div>
 
       <div class="bloc">
@@ -986,10 +992,11 @@
       const plie = avecGroupesMag && estPlie('mag', k, true);
       return `<tr data-g="${k}" class="${x.actif ? '' : 'inactif'} ${plie ? 'plie' : ''}">
         <td><input class="num" type="number" min="1" max="99" value="${x.tournee ?? ''}" data-tournee="${x.id}" placeholder="—" title="N° de tournée"></td>
-        <td><b>${esc(x.nom)}</b></td><td>${esc(x.commune)}</td>
+        <td><input class="txt nom" value="${esc(x.nom)}" data-nom="${x.id}" maxlength="60" title="Cliquer pour modifier le nom"></td>
+        <td><input class="txt" value="${esc(x.commune || '')}" data-commune="${x.id}" maxlength="60" placeholder="—" title="Cliquer pour modifier la commune"></td>
         <td><input type="number" min="0" max="2" value="${x.besoin_defaut}" data-besoin="${x.id}"></td>
         <td>${refs.map(ligneAcces).join('') || '<span class="note">—</span>'}</td>
-        <td><input type="checkbox" data-actif="${x.id}" ${x.actif ? 'checked' : ''}></td></tr>`;
+        <td style="white-space:nowrap;"><input type="checkbox" data-actif="${x.id}" ${x.actif ? 'checked' : ''}><button class="btn-suppr" data-suppr="${x.id}" title="Supprimer ce magasin">🗑</button></td></tr>`;
     }).join('')).join('') || '<tr><td colspan="6" class="note">Aucun magasin.</td></tr>';
     activerPlis('mag', $('listeMagasins'), 'plisMag', avecGroupesMag ? clesMag.length : 0);
 
@@ -1016,6 +1023,41 @@
       if (r1.error) { alert('Erreur lors de la mise à jour.'); return; }
       showToast('Besoin mis à jour.'); chargerTout(true);
     });
+    // Modifier le nom ou la commune d'un magasin (enregistré en quittant le champ)
+    const renommer = (attr, champ) => document.querySelectorAll(`[data-${attr}]`).forEach(inp => inp.onchange = async () => {
+      const valeur = inp.value.trim().replace(/\s+/g, ' ');
+      if (champ === 'nom' && !valeur) { alert('Le nom du magasin ne peut pas être vide.'); chargerMagasins(); return; }
+      const { error } = await sb.from('collecte_magasins').update({ [champ]: valeur || null }).eq('id', inp.dataset[attr]);
+      if (error) { alert('Erreur : ' + error.message); chargerMagasins(); return; }
+      showToast(champ === 'nom' ? 'Nom du magasin modifié.' : 'Commune modifiée.');
+      await chargerTout(true); chargerMagasins();
+    });
+    renommer('nom', 'nom');
+    renommer('commune', 'commune');
+
+    // Supprimer un magasin : avertissement détaillé (référents, inscriptions)
+    document.querySelectorAll('[data-suppr]').forEach(b => b.onclick = async () => {
+      const x = magasins.find(m => m.id === b.dataset.suppr);
+      const refs = [...new Set(acces.filter(r => r.role === 'referent' && r.magasin_id === x.id).map(r => r.email))];
+      const { data: cr } = await sb.from('collecte_creneaux').select('id, collecte_inscriptions(id)').eq('magasin_id', x.id);
+      const nbInscr = (cr || []).reduce((t, c) => t + (c.collecte_inscriptions || []).length, 0);
+      const nomComplet = `${x.nom}${x.commune ? ' — ' + x.commune : ''}`;
+      let msg = `Supprimer définitivement le magasin « ${nomComplet} » ?`;
+      if (refs.length || nbInscr) {
+        msg += '\n\n⚠ ATTENTION, seront aussi supprimés :';
+        if (refs.length) msg += `\n• l'accès de ${refs.length} référent(s) à ce magasin :\n   ${refs.join('\n   ')}`;
+        if (nbInscr) msg += `\n• ${nbInscr} inscription(s) de bénévoles sur ses créneaux`;
+        msg += '\n\nPour le retirer seulement de la collecte en conservant tout cela, décoche plutôt « Actif ».';
+      }
+      msg += '\n\nCette suppression est irréversible.';
+      if (!confirm(msg)) return;
+      if ((refs.length || nbInscr) && prompt(`Pour confirmer, tape SUPPRIMER :`) !== 'SUPPRIMER') { showToast('Suppression annulée.'); return; }
+      const { error } = await sb.from('collecte_magasins').delete().eq('id', x.id);
+      if (error) { alert('Erreur : ' + error.message); return; }
+      showToast(`Magasin « ${x.nom} » supprimé.`);
+      await chargerTout(true); chargerMagasins();
+    });
+
     document.querySelectorAll('[data-tournee]').forEach(inp => inp.onchange = async () => {
       const brut = inp.value.trim();
       const tournee = brut === '' ? null : parseInt(brut, 10);
