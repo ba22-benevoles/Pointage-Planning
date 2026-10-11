@@ -166,6 +166,7 @@
     body { background: white; }
     #app, .toast, .overlay { display: none !important; }
     #impression { display: block; }
+    .fiche:last-child { page-break-after: auto; }
     .fiche { page-break-after: always; font-family: Arial, sans-serif; }
     .fiche h1 { font-size: 20px; margin: 0 0 4px; }
     .fiche .s { font-size: 12px; color: #555; margin-bottom: 12px; }
@@ -900,12 +901,13 @@
       const c = chauffeurs.find(x => x.id === id);
       return c ? `${esc(c.nom)} ${esc(c.prenom)}${c.telephone ? '<br>' + esc(c.telephone) : ''}` : '<span class="manque">à définir</span>';
     };
-    const entete = `<div class="s">Banque Alimentaire des Côtes d'Armor · ${jours.map(jourLong).join(' et ')} · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>`;
+    const entete = `<div class="s">Banque Alimentaire des Côtes d'Armor · collecte des ${jours.map(jourLong).join(' et ')} · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>`;
 
-    // 1. Par jour : une ligne par tournée
-    let html = `<div class="fiche"><h1>Collecte — Tableau des chauffeurs</h1>${entete}`;
+    // 1. Une page par jour : les tournées, puis la liste des chauffeurs du jour
+    let html = '';
     jours.forEach(j => {
-      html += `<h2>${jourLong(j)}</h2><table class="chauf"><tr><th class="t">Tournée</th><th>Camion</th><th>Chauffeur 1</th><th>Chauffeur 2</th><th>Magasins</th></tr>`;
+      html += `<div class="fiche"><h1>Chauffeurs — ${jourLong(j)}</h1>${entete}
+        <h2>Tournées</h2><table class="chauf"><tr><th class="t">Tournée</th><th>Camion</th><th>Chauffeur 1</th><th>Chauffeur 2</th><th>Magasins</th></tr>`;
       tournees.forEach(t => {
         const e = equipageDe(t.n, j) || {};
         html += `<tr><td class="t">T${t.n}</td><td>${esc(e.camion || '') || '<span class="manque">à définir</span>'}</td>
@@ -913,21 +915,34 @@
           <td class="mags">${t.magasins.map(m => esc(m.nom) + (m.commune ? ' (' + esc(m.commune) + ')' : '')).join(', ')}</td></tr>`;
       });
       html += '</table>';
+      // chauffeurs du jour, par ordre alphabétique (pour les appeler)
+      const alpha = (a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom);
+      const duJour = chauffeurs.filter(c => equipages.some(e => e.jour === j && (e.chauffeur_1 === c.id || e.chauffeur_2 === c.id))).sort(alpha);
+      if (duJour.length) {
+        html += `<h2>Chauffeurs du jour (${duJour.length})</h2><table class="chauf"><tr><th>Chauffeur</th><th class="tel">Téléphone</th><th class="t">Tournée</th><th>Camion</th></tr>`;
+        duJour.forEach(c => {
+          const e = equipages.find(x => x.jour === j && (x.chauffeur_1 === c.id || x.chauffeur_2 === c.id));
+          html += `<tr><td>${esc(c.nom)} ${esc(c.prenom)}</td><td>${esc(c.telephone || '')}</td><td class="t">T${e.tournee}</td><td>${esc(e.camion || '')}</td></tr>`;
+        });
+        html += '</table>';
+      }
+      html += '</div>';
     });
 
-    // 2. Par chauffeur : qui roule quand (pour les appeler)
-    const affectes = chauffeurs.filter(c => equipages.some(e => e.chauffeur_1 === c.id || e.chauffeur_2 === c.id));
-    if (affectes.length) {
-      html += `<h2>Chauffeurs affectés</h2><table class="chauf"><tr><th>Chauffeur</th><th class="tel">Téléphone</th>${jours.map(j => `<th class="case">${jourCourt(j)}</th>`).join('')}</tr>`;
+    // 2. Dernière page : récapitulatif sur l'ensemble des jours (qui roule quand)
+    const affectes = chauffeurs.filter(c => equipages.some(e => e.chauffeur_1 === c.id || e.chauffeur_2 === c.id))
+      .sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
+    if (affectes.length && jours.length > 1) {
+      html += `<div class="fiche"><h1>Chauffeurs — récapitulatif</h1>${entete}<table class="chauf"><tr><th>Chauffeur</th><th class="tel">Téléphone</th>${jours.map(j => `<th class="case">${jourCourt(j)}</th>`).join('')}</tr>`;
       affectes.forEach(c => {
         html += `<tr><td>${esc(c.nom)} ${esc(c.prenom)}</td><td>${esc(c.telephone || '')}</td>${jours.map(j => {
           const e = equipages.find(x => x.jour === j && (x.chauffeur_1 === c.id || x.chauffeur_2 === c.id));
           return `<td class="case">${e ? 'T' + e.tournee + (e.camion ? '<br>' + esc(e.camion) : '') : '—'}</td>`;
         }).join('')}</tr>`;
       });
-      html += '</table>';
+      html += '</table></div>';
     }
-    $('impression').innerHTML = html + '</div>';
+    $('impression').innerHTML = html;
     window.print();
   };
 
