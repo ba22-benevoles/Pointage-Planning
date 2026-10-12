@@ -78,6 +78,7 @@ create table if not exists collecte_equipages (
   camion      text,
   chauffeur_1 uuid references benevoles(id) on delete set null,
   chauffeur_2 uuid references benevoles(id) on delete set null,
+  accompagnateur text,   -- facultatif, texte libre (bénévole de la BA)
   unique (tournee, jour),
   check (chauffeur_1 is null or chauffeur_2 is null or chauffeur_1 <> chauffeur_2)
 );
@@ -388,6 +389,7 @@ begin
     raise exception 'Chauffeur déjà affecté à la tournée % ce jour-là', v_autre;
   end if;
   new.camion := nullif(trim(new.camion), '');
+  new.accompagnateur := nullif(trim(new.accompagnateur), '');
   return new;
 end $$;
 drop trigger if exists trg_collecte_equipage on collecte_equipages;

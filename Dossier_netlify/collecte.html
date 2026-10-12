@@ -180,6 +180,13 @@
     .fiche table.tour th.mag { width: 45%; }
     .fiche td.case, .fiche th.case { width: 80px; }
     .fiche table.eq { margin-bottom: 14px; }
+    @page paysage { size: A4 landscape; }
+    .fiche.paysage { page: paysage; }
+    .fiche table.chauf2 { font-size: 12px; }
+    .fiche table.chauf2 th { text-align: center; vertical-align: middle; }
+    .fiche table.chauf2 td { vertical-align: middle; }
+    .fiche table.chauf2 td.t { text-align: center; font-weight: bold; font-size: 14px; width: 60px; }
+    .fiche table.chauf2 tr.debut td { border-top: 2px solid #333; }
     .fiche table.chauf th.t { width: 70px; }
     .fiche table.chauf td.t { font-weight: bold; white-space: nowrap; }
     .fiche table.chauf td.mags { font-size: 11px; color: #444; }
@@ -263,7 +270,7 @@
       <div id="resumeTournees"></div>
       <div id="listeTournees"></div>
       <datalist id="listeCamions"></datalist>
-      <p class="note">Pour chaque tournée et chaque jour : le camion et ses 2 chauffeurs. Enregistrement automatique à chaque changement. Un chauffeur ou un camion ne peut faire qu'une tournée par jour. La liste propose les bénévoles actifs qualifiés « Chauffeur » dans l'outil de pointage : pour en ajouter un, l'administrateur coche ce poste sur sa fiche. Les numéros de tournée se règlent dans l'onglet « Magasins &amp; accès ». Les affectations sont effacées à la clôture de la collecte.</p>
+      <p class="note">Pour chaque tournée et chaque jour : le camion, ses 2 chauffeurs et, si besoin, un accompagnateur (texte libre). Enregistrement automatique à chaque changement. Un chauffeur ou un camion ne peut faire qu'une tournée par jour. La liste propose les bénévoles actifs qualifiés « Chauffeur » dans l'outil de pointage : pour en ajouter un, l'administrateur coche ce poste sur sa fiche. Les numéros de tournée se règlent dans l'onglet « Magasins &amp; accès ». Les affectations sont effacées à la clôture de la collecte.</p>
     </section>
 
     <!-- Magasins & accès (responsable uniquement) -->
@@ -855,7 +862,7 @@
         <h3><span class="tournee">T${t.n}</span> Tournée ${t.n}</h3>
         <div class="mags">${t.magasins.map(m => `${esc(m.nom)}${m.commune ? ' (' + esc(m.commune) + ')' : ''}`).join(' · ')}</div>
         <table class="equipage">
-          <thead><tr><th>Jour</th><th>Camion</th><th>Chauffeur 1</th><th>Chauffeur 2</th><th></th></tr></thead>
+          <thead><tr><th>Jour</th><th>Camion</th><th>Chauffeur 1</th><th>Chauffeur 2</th><th>Accompagnateur <span style="font-weight:400;">(facultatif)</span></th><th></th></tr></thead>
           <tbody>${jours.map(j => {
             const e = equipageDe(t.n, j) || {};
             const etat = estComplet(e) ? '<span class="etat ok">complet</span>' : '<span class="etat invite">incomplet</span>';
@@ -864,6 +871,7 @@
               <td><input class="eq-camion" list="listeCamions" value="${esc(e.camion || '')}" placeholder="ex. Master, Iveco…" maxlength="40"></td>
               <td><select class="eq-c1">${options(j, t.n, e.chauffeur_1)}</select></td>
               <td><select class="eq-c2">${options(j, t.n, e.chauffeur_2)}</select></td>
+              <td><input class="eq-acc" value="${esc(e.accompagnateur || '')}" placeholder="Nom, si besoin" maxlength="60"></td>
               <td class="etat-eq">${etat}</td></tr>`;
           }).join('')}</tbody>
         </table>
@@ -879,7 +887,8 @@
     const valeurs = {
       camion: tr.querySelector('.eq-camion').value.trim() || null,
       chauffeur_1: tr.querySelector('.eq-c1').value || null,
-      chauffeur_2: tr.querySelector('.eq-c2').value || null
+      chauffeur_2: tr.querySelector('.eq-c2').value || null,
+      accompagnateur: tr.querySelector('.eq-acc').value.trim() || null
     };
     if (valeurs.chauffeur_1 && valeurs.chauffeur_1 === valeurs.chauffeur_2) {
       alert('Les deux chauffeurs doivent être différents.'); afficherTournees(); return;
@@ -895,58 +904,44 @@
     await chargerTournees();
   }
 
-  // ---------- Impression : tableau des chauffeurs (vue d'ensemble) ----------
+  // ---------- Impression : tableau des chauffeurs (une seule feuille, paysage) ----------
+  // Tournée / Magasins / Localité / Chauffeurs + accompagnateur par jour / Véhicule
+  // Noms seulement (pas de téléphones) : les chauffeurs se connaissent.
   $('btnImprimerChauffeurs').onclick = async () => {
     await chargerTournees();
     const jours = parametres?.jours || [];
     const tournees = tourneesActives();
     if (!tournees.length) { showToast('Aucune tournée à imprimer.'); return; }
-    const contact = id => {
-      const c = chauffeurs.find(x => x.id === id);
-      return c ? `${esc(c.nom)} ${esc(c.prenom)}${c.telephone ? '<br>' + esc(c.telephone) : ''}` : '<span class="manque">à définir</span>';
+    const equipe = e => {
+      const noms = [e?.chauffeur_1, e?.chauffeur_2].filter(Boolean).map(id => esc(nomChauffeur(id)));
+      let txt = noms.length ? noms.join('<br>') : '<span class="manque">à définir</span>';
+      if (noms.length === 1) txt += '<br><span class="manque">2ᵉ chauffeur à définir</span>';
+      if (e?.accompagnateur) txt += `<br><i>+ ${esc(e.accompagnateur)}</i>`;
+      return txt;
     };
-    const entete = `<div class="s">Banque Alimentaire des Côtes d'Armor · collecte des ${jours.map(jourLong).join(' et ')} · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>`;
-
-    // 1. Une page par jour : les tournées, puis la liste des chauffeurs du jour
-    let html = '';
-    jours.forEach(j => {
-      html += `<div class="fiche"><h1>Chauffeurs — ${jourLong(j)}</h1>${entete}
-        <h2>Tournées</h2><table class="chauf"><tr><th class="t">Tournée</th><th>Camion</th><th>Chauffeur 1</th><th>Chauffeur 2</th><th>Magasins</th></tr>`;
-      tournees.forEach(t => {
-        const e = equipageDe(t.n, j) || {};
-        html += `<tr><td class="t">T${t.n}</td><td>${esc(e.camion || '') || '<span class="manque">à définir</span>'}</td>
-          <td>${contact(e.chauffeur_1)}</td><td>${contact(e.chauffeur_2)}</td>
-          <td class="mags">${t.magasins.map(m => esc(m.nom) + (m.commune ? ' (' + esc(m.commune) + ')' : '')).join(', ')}</td></tr>`;
+    const vehicule = n => {
+      const cam = jours.map(j => equipageDe(n, j)?.camion || '');
+      if (cam.every(c => c === cam[0])) return cam[0] ? esc(cam[0]) : '<span class="manque">à définir</span>';
+      return jours.map((j, i) => `${jourCourt(j)} : ${cam[i] ? esc(cam[i]) : '<span class="manque">?</span>'}`).join('<br>');
+    };
+    let html = `<div class="fiche paysage"><h1>Collecte — Tableau des chauffeurs</h1>
+      <div class="s">Banque Alimentaire des Côtes d'Armor · collecte des ${jours.map(jourLong).join(' et ')} · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>
+      <table class="chauf2"><tr><th class="t">Tournée</th><th>Magasins</th><th>Localité</th>
+        ${jours.map(j => `<th>Chauffeurs + accompagnateur<br>${jourLong(j)}</th>`).join('')}<th>Véhicule</th></tr>`;
+    tournees.forEach(t => {
+      const n = t.magasins.length;
+      t.magasins.forEach((m, i) => {
+        html += `<tr class="${i === 0 ? 'debut' : ''}">`;
+        if (i === 0) html += `<td class="t" rowspan="${n}">T${t.n}</td>`;
+        html += `<td>${esc(m.nom)}</td><td>${esc(m.commune || '')}</td>`;
+        if (i === 0) {
+          html += jours.map(j => `<td rowspan="${n}">${equipe(equipageDe(t.n, j))}</td>`).join('');
+          html += `<td rowspan="${n}">${vehicule(t.n)}</td>`;
+        }
+        html += '</tr>';
       });
-      html += '</table>';
-      // chauffeurs du jour, par ordre alphabétique (pour les appeler)
-      const alpha = (a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom);
-      const duJour = chauffeurs.filter(c => equipages.some(e => e.jour === j && (e.chauffeur_1 === c.id || e.chauffeur_2 === c.id))).sort(alpha);
-      if (duJour.length) {
-        html += `<h2>Chauffeurs du jour (${duJour.length})</h2><table class="chauf"><tr><th>Chauffeur</th><th class="tel">Téléphone</th><th class="t">Tournée</th><th>Camion</th></tr>`;
-        duJour.forEach(c => {
-          const e = equipages.find(x => x.jour === j && (x.chauffeur_1 === c.id || x.chauffeur_2 === c.id));
-          html += `<tr><td>${esc(c.nom)} ${esc(c.prenom)}</td><td>${esc(c.telephone || '')}</td><td class="t">T${e.tournee}</td><td>${esc(e.camion || '')}</td></tr>`;
-        });
-        html += '</table>';
-      }
-      html += '</div>';
     });
-
-    // 2. Dernière page : récapitulatif sur l'ensemble des jours (qui roule quand)
-    const affectes = chauffeurs.filter(c => equipages.some(e => e.chauffeur_1 === c.id || e.chauffeur_2 === c.id))
-      .sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
-    if (affectes.length && jours.length > 1) {
-      html += `<div class="fiche"><h1>Chauffeurs — récapitulatif</h1>${entete}<table class="chauf"><tr><th>Chauffeur</th><th class="tel">Téléphone</th>${jours.map(j => `<th class="case">${jourCourt(j)}</th>`).join('')}</tr>`;
-      affectes.forEach(c => {
-        html += `<tr><td>${esc(c.nom)} ${esc(c.prenom)}</td><td>${esc(c.telephone || '')}</td>${jours.map(j => {
-          const e = equipages.find(x => x.jour === j && (x.chauffeur_1 === c.id || x.chauffeur_2 === c.id));
-          return `<td class="case">${e ? 'T' + e.tournee + (e.camion ? '<br>' + esc(e.camion) : '') : '—'}</td>`;
-        }).join('')}</tr>`;
-      });
-      html += '</table></div>';
-    }
-    $('impression').innerHTML = html;
+    $('impression').innerHTML = html + '</table></div>';
     window.print();
   };
 
@@ -972,6 +967,7 @@
         html += `<table class="eq"><tr><th>Jour</th><th>Camion</th><th>Chauffeurs</th></tr>${(parametres?.jours || []).map(j => {
           const e = equipageDe(+k, j) || {};
           const ch = [e.chauffeur_1, e.chauffeur_2].filter(Boolean).map(id => `${esc(nomChauffeur(id))}${telChauffeur(id) ? ' — ' + esc(telChauffeur(id)) : ''}`);
+          if (e.accompagnateur) ch.push(`<i>Accompagnateur : ${esc(e.accompagnateur)}</i>`);
           return `<tr><td class="j">${jourLong(j)}</td><td>${esc(e.camion || '') || '<span class="manque">à définir</span>'}</td><td>${ch.join('<br>') || '<span class="manque">à définir</span>'}</td></tr>`;
         }).join('')}</table>`;
       }

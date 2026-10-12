@@ -36,6 +36,7 @@ supabase/
     alerte-poste-vide/          — alerte si un poste tombe à zéro
 migration_*.sql                 — migrations SQL, dans l'ordre chronologique (voir plus bas)
 migration_collecte.sql          — tout le module Collecte, en un seul fichier autonome
+migration_collecte_*.sql        — compléments ultérieurs du module (à exécuter après, sur une base déjà installée)
 .gitignore                      — exclut les fichiers contenant des données personnelles réelles
 ```
 
