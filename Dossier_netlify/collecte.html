@@ -180,13 +180,19 @@
     .fiche table.tour th.mag { width: 45%; }
     .fiche td.case, .fiche th.case { width: 80px; }
     .fiche table.eq { margin-bottom: 14px; }
-    @page paysage { size: A4 landscape; }
+    /* Tableau des chauffeurs : paysage, au format choisi à l'impression (A3 ou A4) */
+    @page paysage { size: landscape; margin: 10mm; }
     .fiche.paysage { page: paysage; }
-    .fiche table.chauf2 { font-size: 12px; }
-    .fiche table.chauf2 th { text-align: center; vertical-align: middle; }
-    .fiche table.chauf2 td { vertical-align: middle; }
-    .fiche table.chauf2 td.t { text-align: center; font-weight: bold; font-size: 14px; width: 60px; }
-    .fiche table.chauf2 tr.debut td { border-top: 2px solid #333; }
+    .fiche.paysage h1 { font-size: 26px; }
+    .fiche.paysage .s { font-size: 14px; }
+    .fiche table.chauf2 { font-size: 17px; }
+    .fiche table.chauf2 th { text-align: center; vertical-align: middle; font-size: 15px; padding: 8px; }
+    .fiche table.chauf2 td { vertical-align: middle; padding: 7px 10px; line-height: 1.35; }
+    .fiche table.chauf2 td.t { text-align: center; font-weight: bold; font-size: 22px; width: 70px; }
+    .fiche table.chauf2 td.equipe { font-weight: bold; }
+    .fiche table.chauf2 td.equipe i, .fiche table.chauf2 td.equipe .manque { font-weight: normal; }
+    .fiche table.chauf2 tr { page-break-inside: avoid; break-inside: avoid; }
+    .fiche table.chauf2 tbody.bloc-tournee tr:first-child td { border-top: 3px solid #333; }
     .fiche table.chauf th.t { width: 70px; }
     .fiche table.chauf td.t { font-weight: bold; white-space: nowrap; }
     .fiche table.chauf td.mags { font-size: 11px; color: #444; }
@@ -926,20 +932,22 @@
     };
     let html = `<div class="fiche paysage"><h1>Collecte — Tableau des chauffeurs</h1>
       <div class="s">Banque Alimentaire des Côtes d'Armor · collecte des ${jours.map(jourLong).join(' et ')} · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>
-      <table class="chauf2"><tr><th class="t">Tournée</th><th>Magasins</th><th>Localité</th>
-        ${jours.map(j => `<th>Chauffeurs + accompagnateur<br>${jourLong(j)}</th>`).join('')}<th>Véhicule</th></tr>`;
+      <table class="chauf2"><thead><tr><th class="t">Tournée</th><th>Magasins</th><th>Localité</th>
+        ${jours.map(j => `<th>Chauffeurs + accompagnateur<br>${jourLong(j)}</th>`).join('')}<th>Véhicule</th></tr></thead>`;
     tournees.forEach(t => {
       const n = t.magasins.length;
+      html += '<tbody class="bloc-tournee">';
       t.magasins.forEach((m, i) => {
-        html += `<tr class="${i === 0 ? 'debut' : ''}">`;
+        html += '<tr>';
         if (i === 0) html += `<td class="t" rowspan="${n}">T${t.n}</td>`;
         html += `<td>${esc(m.nom)}</td><td>${esc(m.commune || '')}</td>`;
         if (i === 0) {
-          html += jours.map(j => `<td rowspan="${n}">${equipe(equipageDe(t.n, j))}</td>`).join('');
+          html += jours.map(j => `<td class="equipe" rowspan="${n}">${equipe(equipageDe(t.n, j))}</td>`).join('');
           html += `<td rowspan="${n}">${vehicule(t.n)}</td>`;
         }
         html += '</tr>';
       });
+      html += '</tbody>';
     });
     $('impression').innerHTML = html + '</table></div>';
     window.print();
