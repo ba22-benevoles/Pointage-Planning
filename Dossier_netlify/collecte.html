@@ -114,6 +114,11 @@
   .modal { background: var(--panel); border-radius: 16px; padding: 24px; width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; }
   .modal h2 { font-family: Georgia, serif; color: var(--green); margin: 0 0 4px; font-size: 20px; }
   .modal .quand { color: var(--ink-soft); font-size: 14px; margin-bottom: 16px; }
+  .inscrit .actions { display: flex; gap: 2px; flex-shrink: 0; }
+  .inscrit .btn-modif { color: var(--green); }
+  .inscrit.edition { display: block; }
+  .inscrit.edition .field { margin-bottom: 8px; }
+  .inscrit.edition .field input { padding: 8px 10px; font-size: 14px; }
   .inscrit { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg); border: 2px solid var(--line); border-radius: 12px; margin-bottom: 8px; }
   .inscrit .nom { font-weight: 700; font-size: 14px; }
   .inscrit .detail { color: var(--ink-soft); font-size: 13px; }
@@ -724,9 +729,47 @@
               i.email ? `<a href="mailto:${esc(i.email)}">${esc(i.email)}</a>` : '',
               i.remarque ? esc(i.remarque) : ''].filter(Boolean).join(' · ')}</div>
           </div>
-          <button class="btn-link" data-id="${i.id}">Retirer</button>
+          <div class="actions">
+            <button class="btn-link btn-modif" data-modif="${i.id}">Modifier</button>
+            <button class="btn-link" data-id="${i.id}">Retirer</button>
+          </div>
         </div>`).join('');
-      liste.querySelectorAll('button').forEach(b => b.onclick = async () => {
+      // Modifier : le bloc de l'inscrit devient un petit formulaire
+      liste.querySelectorAll('[data-modif]').forEach(b => b.onclick = () => {
+        const i = c.collecte_inscriptions.find(x => x.id === b.dataset.modif);
+        const bloc = b.closest('.inscrit');
+        bloc.classList.add('edition');
+        bloc.innerHTML = `
+          <div class="field-row">
+            <div class="field"><label>Nom et prénom</label><input class="m-nom" value="${esc(i.nom)}"></div>
+            <div class="field"><label>Téléphone</label><input class="m-tel" type="tel" value="${esc(i.telephone || '')}"></div>
+          </div>
+          <div class="field"><label>Email (facultatif)</label><input class="m-email" type="email" value="${esc(i.email || '')}"></div>
+          <div class="field"><label>Remarque (facultatif)</label><input class="m-rem" value="${esc(i.remarque || '')}"></div>
+          <div class="error m-err"></div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary btn-small m-ok">Enregistrer</button>
+            <button class="btn btn-secondary btn-small m-annuler">Annuler</button>
+          </div>`;
+        const champ = cl => bloc.querySelector(cl);
+        champ('.m-tel').focus();
+        champ('.m-annuler').onclick = () => afficherFenetre(c.id);
+        champ('.m-ok').onclick = async () => {
+          const nom = champ('.m-nom').value.trim();
+          const email = champ('.m-email').value.trim().toLowerCase() || null;
+          if (!nom) { champ('.m-err').textContent = 'Le nom est obligatoire.'; return; }
+          if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { champ('.m-err').textContent = 'Adresse email invalide.'; return; }
+          champ('.m-ok').disabled = true;
+          const { error } = await sb.from('collecte_inscriptions').update({
+            nom, telephone: champ('.m-tel').value.trim() || null, email, remarque: champ('.m-rem').value.trim() || null
+          }).eq('id', i.id);
+          if (error) { champ('.m-err').textContent = 'Enregistrement impossible : ' + error.message; champ('.m-ok').disabled = false; return; }
+          showToast(`${nom} modifié(e).`);
+          await chargerTout();
+        };
+        bloc.querySelectorAll('input').forEach(inp => inp.addEventListener('keydown', e => { if (e.key === 'Enter') champ('.m-ok').click(); }));
+      });
+      liste.querySelectorAll('[data-id]').forEach(b => b.onclick = async () => {
         const nom = c.collecte_inscriptions.find(i => i.id === b.dataset.id)?.nom;
         if (!confirm(`Retirer ${nom} de ce créneau ?`)) return;
         const { error } = await sb.from('collecte_inscriptions').delete().eq('id', b.dataset.id);
