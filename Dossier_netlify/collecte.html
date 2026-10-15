@@ -323,7 +323,7 @@
         <div id="texteEdition" style="font-size:14px; margin-bottom:12px;"></div>
         <div id="zoneCloture" style="margin-bottom:18px;">
           <button class="btn btn-secondary btn-small" id="btnCloturer" style="color:var(--danger);">Clôturer la collecte</button>
-          <p class="note">À faire dans le mois qui suit la collecte, une fois le bilan fait. Efface définitivement les noms, téléphones et remarques des bénévoles inscrits (seul le nombre d'inscrits par créneau est gardé, sans nom), et supprime les référents qui n'ont pas donné leur accord de conservation. Plus aucune saisie possible ensuite.</p>
+          <p class="note">À faire dans le mois qui suit la collecte, une fois le bilan fait. Efface définitivement les noms, téléphones, emails et remarques des bénévoles inscrits (seul le nombre d'inscrits par créneau est gardé, sans nom), et supprime les référents qui n'ont pas donné leur accord de conservation. Plus aucune saisie possible ensuite.</p>
         </div>
         <div class="ajout-ligne">
           <div class="field"><label>Nouveau jour 1</label><input id="nvJour1" type="date"></div>
@@ -355,8 +355,9 @@
       <div class="field"><label>Nom et prénom</label><input id="fenNom" autocomplete="off"></div>
       <div class="field"><label>Téléphone</label><input id="fenTel" type="tel" autocomplete="off"></div>
     </div>
+    <div class="field"><label>Email (facultatif)</label><input id="fenEmail" type="email" placeholder="prenom.nom@exemple.fr" autocomplete="off"></div>
     <div class="field"><label>Remarque (facultatif)</label><input id="fenRemarque" placeholder="ex. vient avec son fils" autocomplete="off"></div>
-    <div class="mention">Nom et téléphone servent uniquement à organiser cette collecte et sont effacés à sa clôture. Pas d'information sensible (santé…) dans la remarque. Préviens le bénévole. <a href="confidentialite-collecte.html" target="_blank">En savoir plus</a></div>
+    <div class="mention">Nom, téléphone et email servent uniquement à organiser cette collecte et sont effacés à sa clôture. Pas d'information sensible (santé…) dans la remarque. Préviens le bénévole. <a href="confidentialite-collecte.html" target="_blank">En savoir plus</a></div>
     </div>
     <div class="error" id="fenErreur"></div>
     <div style="display:flex; gap:8px;">
@@ -546,7 +547,7 @@
     const [p, c] = await Promise.all([
       sb.from('collecte_parametres').select('*').eq('id', 1).maybeSingle(),
       sb.from('collecte_creneaux')
-        .select('id, jour, heure_debut, heure_fin, besoin, magasin_id, collecte_magasins!inner(nom, commune, actif, tournee), collecte_inscriptions(id, nom, telephone, remarque, created_at)')
+        .select('id, jour, heure_debut, heure_fin, besoin, magasin_id, collecte_magasins!inner(nom, commune, actif, tournee), collecte_inscriptions(id, nom, telephone, email, remarque, created_at)')
         .eq('collecte_magasins.actif', true)
         .order('jour').order('heure_debut')
     ]);
@@ -668,7 +669,7 @@
   function afficherBandeaux() {
     let html = '';
     if (cloturee()) {
-      html += `<div class="bandeau info">Collecte clôturée le ${new Date(parametres.cloturee_le).toLocaleDateString('fr-FR')} : les noms et téléphones des bénévoles ont été effacés. La grille ne montre plus que le bilan, sans nom.</div>`;
+      html += `<div class="bandeau info">Collecte clôturée le ${new Date(parametres.cloturee_le).toLocaleDateString('fr-FR')} : les noms, téléphones et emails des bénévoles ont été effacés. La grille ne montre plus que le bilan, sans nom.</div>`;
     } else if (estResponsable && parametres?.jours?.length) {
       const fin = new Date(parametres.jours[parametres.jours.length - 1] + 'T23:59:59');
       const jours = Math.floor((Date.now() - fin) / 86400000);
@@ -718,7 +719,10 @@
         <div class="inscrit">
           <div>
             <div class="nom">${esc(i.nom)}</div>
-            <div class="detail">${i.telephone ? `<a href="tel:${esc(i.telephone.replace(/\s/g, ''))}">${esc(i.telephone)}</a>` : ''}${i.remarque ? ' · ' + esc(i.remarque) : ''}</div>
+            <div class="detail">${[
+              i.telephone ? `<a href="tel:${esc(i.telephone.replace(/\s/g, ''))}">${esc(i.telephone)}</a>` : '',
+              i.email ? `<a href="mailto:${esc(i.email)}">${esc(i.email)}</a>` : '',
+              i.remarque ? esc(i.remarque) : ''].filter(Boolean).join(' · ')}</div>
           </div>
           <button class="btn-link" data-id="${i.id}">Retirer</button>
         </div>`).join('');
@@ -739,7 +743,7 @@
     $('fenBtnAjouter').classList.toggle('hidden', complet);
     if (premiereOuverture) {
       $('fenBesoin').value = c.besoin;
-      $('fenNom').value = ''; $('fenTel').value = ''; $('fenRemarque').value = '';
+      $('fenNom').value = ''; $('fenTel').value = ''; $('fenEmail').value = ''; $('fenRemarque').value = '';
       $('fenErreur').textContent = '';
     }
     $('fenetre').classList.remove('hidden');
@@ -753,26 +757,28 @@
   $('fenBtnAjouter').onclick = async () => {
     const nom = $('fenNom').value.trim();
     const telephone = $('fenTel').value.trim() || null;
+    const email = $('fenEmail').value.trim().toLowerCase() || null;
     const remarque = $('fenRemarque').value.trim() || null;
     if (!nom) { $('fenErreur').textContent = 'Le nom est obligatoire.'; return; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('fenErreur').textContent = 'Adresse email invalide.'; return; }
     const c = creneaux.find(x => x.id === creneauOuvert);
     if (c && c.collecte_inscriptions.some(i => i.nom.toLowerCase() === nom.toLowerCase())
         && !confirm(`${nom} est déjà inscrit(e) sur ce créneau. L'ajouter quand même ?`)) return;
 
     $('fenBtnAjouter').disabled = true;
-    const { error } = await sb.from('collecte_inscriptions').insert({ creneau_id: creneauOuvert, nom, telephone, remarque });
+    const { error } = await sb.from('collecte_inscriptions').insert({ creneau_id: creneauOuvert, nom, telephone, email, remarque });
     $('fenBtnAjouter').disabled = false;
     if (error) {
       $('fenErreur').textContent = error.message.includes('complet')
         ? 'Ce créneau vient d\'être complété par quelqu\'un d\'autre.' : 'Enregistrement impossible : ' + error.message;
       await chargerTout(); return;
     }
-    $('fenNom').value = ''; $('fenTel').value = ''; $('fenRemarque').value = ''; $('fenErreur').textContent = '';
+    $('fenNom').value = ''; $('fenTel').value = ''; $('fenEmail').value = ''; $('fenRemarque').value = ''; $('fenErreur').textContent = '';
     showToast(`${nom} ajouté(e).`);
     await chargerTout();
     $('fenNom').focus();
   };
-  ['fenNom', 'fenTel', 'fenRemarque'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') $('fenBtnAjouter').click(); }));
+  ['fenNom', 'fenTel', 'fenEmail', 'fenRemarque'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') $('fenBtnAjouter').click(); }));
 
   $('fenBtnBesoin').onclick = async () => {
     const besoin = parseInt($('fenBesoin').value, 10);
@@ -803,7 +809,7 @@
           jours.forEach(j => {
             const cr = c.find(x => x.jour === j && x.heure_debut === h);
             if (!cr) { html += '<td></td>'; return; }
-            const lignes = cr.collecte_inscriptions.map(i => `${esc(i.nom)}${i.telephone ? ' — ' + esc(i.telephone) : ''}`);
+            const lignes = cr.collecte_inscriptions.map(i => `${esc(i.nom)}${i.telephone ? ' — ' + esc(i.telephone) : ''}${i.email ? '<br><span style="font-size:10px;">' + esc(i.email) + '</span>' : ''}`);
             const manque = cr.besoin - cr.collecte_inscriptions.length;
             if (manque > 0) lignes.push(`<span class="manque">${manque} place(s) à pourvoir</span>`);
             html += `<td>${lignes.join('<br>')}</td>`;
@@ -1215,7 +1221,7 @@
     const nbInscrits = creneaux.reduce((n, c) => n + c.collecte_inscriptions.length, 0);
     const { data: acces } = await sb.from('collecte_acces').select('email, consentement_le').eq('role', 'referent');
     const sansAccord = [...new Set((acces || []).filter(a => !a.consentement_le).map(a => a.email))];
-    if (!confirm(`Clôturer la collecte ?\n\n• ${nbInscrits} inscription(s) : noms, téléphones et remarques effacés définitivement (le nombre d'inscrits par créneau est gardé).\n• ${sansAccord.length} référent(s) sans accord de conservation supprimé(s)${sansAccord.length ? ' :\n   ' + sansAccord.join('\n   ') : ''}.\n\nCette opération est irréversible. Pense à imprimer les fiches avant si tu en as besoin.`)) return;
+    if (!confirm(`Clôturer la collecte ?\n\n• ${nbInscrits} inscription(s) : noms, téléphones, emails et remarques effacés définitivement (le nombre d'inscrits par créneau est gardé).\n• ${sansAccord.length} référent(s) sans accord de conservation supprimé(s)${sansAccord.length ? ' :\n   ' + sansAccord.join('\n   ') : ''}.\n\nCette opération est irréversible. Pense à imprimer les fiches avant si tu en as besoin.`)) return;
     const { data, error } = await sb.rpc('collecte_cloturer');
     if (error) { alert('Erreur : ' + error.message); return; }
     showToast(`Collecte clôturée : ${data.inscriptions} inscription(s) effacée(s), ${data.acces} accès supprimé(s).`);

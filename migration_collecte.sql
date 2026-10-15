@@ -53,6 +53,7 @@ create table if not exists collecte_inscriptions (
   creneau_id  uuid not null references collecte_creneaux(id) on delete cascade,
   nom         text not null check (length(trim(nom)) > 0),
   telephone   text,
+  email       text,         -- facultatif
   remarque    text,
   cree_par    text default (auth.jwt() ->> 'email'),
   created_at  timestamptz not null default now()
@@ -307,7 +308,7 @@ end $$;
 grant execute on function collecte_mon_consentement(boolean) to authenticated;
 
 -- ---------- 9. Clôture de la collecte (RGPD) ------------------------
--- 1. Bénévoles inscrits : nom, téléphone, remarque effacés ; équipages
+-- 1. Bénévoles inscrits : nom, téléphone, email, remarque effacés ; équipages
 --    (chauffeurs et camions affectés aux tournées) supprimés. Seul reste le
 --    nombre d'inscrits par créneau (bilan anonyme).
 -- 2. Référents SANS accord de conservation : accès supprimés, et leur compte
@@ -326,7 +327,7 @@ begin
   end if;
 
   update collecte_inscriptions
-     set nom = '—', telephone = null, remarque = null, cree_par = null
+     set nom = '—', telephone = null, email = null, remarque = null, cree_par = null
    where true;
   get diagnostics v_inscr = row_count;
 
