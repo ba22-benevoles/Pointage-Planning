@@ -40,6 +40,7 @@
     <a href="#benevoles">👤 Bénévoles</a>
     <a href="#conges">📅 Congés / Absences</a>
     <a href="#planning">🗓️ Planning</a>
+    <a href="#ramasses">🛒 Ramasses</a>
     <a href="#parametres">⚙️ Paramètres</a>
     <a href="#bilans">📊 Bilans</a>
     <a href="#espace-benevole">📱 Espace personnel des bénévoles</a>
@@ -59,6 +60,14 @@
   <p>Un pense-bête libre sur chaque fiche (ex. "Frais le lundi, Tri le mercredi"). Dès qu'une personne avec une note apparaît dans le planning, un petit repère 📝 s'affiche directement sur sa case (et dans le menu déroulant au moment de l'éditer) — survole-le pour lire le texte complet en info-bulle, sans avoir besoin de cliquer.</p>
   <h3>Pointage à distance</h3>
   <p>Une case à cocher permet à un bénévole (ex. relation publique) de pointer son arrivée/départ depuis son propre espace personnel, sans avoir besoin d'être physiquement à la BA. Ça ne l'empêche pas de pointer normalement sur le kiosque s'il vient aussi sur place.</p>
+
+  <h3>Exporter les contacts pour Thunderbird</h3>
+  <p>Le bouton <strong>📧 Exporter pour Thunderbird</strong> (barre d'outils de l'onglet Bénévoles) télécharge un fichier CSV avec le prénom, le nom et l'adresse e-mail des bénévoles <strong>actifs</strong> (salariés compris). Les actifs sans adresse e-mail sont ignorés, le message en indique le nombre.</p>
+  <ul>
+    <li><strong>Import dans Thunderbird</strong> : menu Outils → Importer → Carnets d'adresses → fichier texte (CSV) — le libellé exact varie un peu selon la version. Vérifie à l'écran de correspondance que « Primary Email » est bien associé à l'adresse e-mail</li>
+    <li><strong>Mise à jour</strong> : Thunderbird ne fusionne pas les doublons. Pour une nouvelle liste, supprime l'ancien carnet d'adresses et réimporte le nouveau fichier</li>
+    <li><strong>Envoi groupé</strong> : mets les destinataires en <strong>Cci</strong> (copie cachée), pour que les bénévoles ne voient pas les adresses des autres</li>
+  </ul>
 
   <h2 id="conges">📅 Congés / Absences</h2>
   <p>Déclarer une absence retire automatiquement la personne du planning pour les dates concernées (si le planning était déjà enregistré).</p>
@@ -88,6 +97,19 @@
     <li><strong>Envoyer un message seul</strong> (en bas de l'onglet) — envoie un message sans aucun planning, utile pour une communication ponctuelle</li>
     <li>Le champ "Email de test" permet de s'envoyer l'email à soi-même avant l'envoi réel</li>
   </ul>
+
+  <h2 id="ramasses">🛒 Ramasses</h2>
+  <p>Une grille « semaine type » façon tableur : cinq colonnes (lundi à vendredi), et sur chaque ligne les magasins à ramasser ce jour-là (ex. <code>U Trégastel + Leclerc drive</code>).</p>
+  <ul>
+    <li><strong>Modifier une case</strong> : clique dedans et tape — l'enregistrement est automatique, rien à valider</li>
+    <li><strong>Entrée</strong> passe à la case du dessous ; <strong>Maj + Entrée</strong> fait un retour à la ligne dans la case</li>
+    <li><strong>Colorer une case</strong> pour signaler une particularité : clique dans la case, puis choisis une pastille de couleur au-dessus du tableau (✕ retire la couleur). La couleur est conservée même si la case est vide</li>
+    <li><strong>Commentaires / légende</strong> : zone de texte sous le tableau (ex. <code>(F) = Frais / (F + L) = Frais + légumes / (L) = Légumes</code>), imprimée sous la grille — évite de répéter les mêmes mots dans les cases</li>
+    <li><strong>Vider une case</strong> : efface son texte ; elle est supprimée de la base si elle n'a pas de couleur</li>
+    <li><strong>+ Ajouter une ligne</strong> : ajoute une ligne vide en bas de la grille</li>
+    <li><strong>🖨️ Imprimer la grille (A3)</strong> : sort une feuille propre en <strong>A3 paysage</strong>, avec les couleurs et la légende, à remettre aux chauffeurs (les lignes entièrement vides sont ignorées). Si la feuille sort en A4 ou en portrait, choisis « A3 » et « Paysage » dans la fenêtre d'impression ; si les couleurs n'apparaissent pas, coche « Imprimer les arrière-plans »</li>
+  </ul>
+  <div class="astuce">C'est une seule grille permanente (la même chaque semaine), visible uniquement dans l'espace admin. Pense à réimprimer la feuille quand la grille change.</div>
 
   <h2 id="parametres">⚙️ Paramètres</h2>
   <h3>Taux de valorisation</h3>

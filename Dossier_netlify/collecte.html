@@ -167,42 +167,59 @@
 
   /* --- Impression : une fiche par magasin --- */
   #impression { display: none; }
+  /* Mise en page des fiches. Volontairement HORS de @media print : la zone #impression est masquée
+     à l'écran, ce qui permet de la mesurer (classe .mesure) pour faire tenir le tableau des
+     chauffeurs sur une seule feuille A3 (voir tenirSurUneFeuille). */
+  .fiche:last-child { page-break-after: auto; }
+  .fiche { page-break-after: always; font-family: Arial, sans-serif; }
+  .fiche h1 { font-size: 20px; margin: 0 0 4px; }
+  .fiche .s { font-size: 12px; color: #555; margin-bottom: 12px; }
+  .fiche table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .fiche th, .fiche td { border: 1px solid #999; padding: 6px; vertical-align: top; text-align: left; }
+  .fiche th { background: #eee; }
+  .fiche td.h { white-space: nowrap; font-weight: bold; width: 90px; }
+  .fiche .manque { color: #B4462F; font-style: italic; }
+  .fiche h2 { font-size: 16px; margin: 18px 0 6px; }
+  .fiche table.tour { table-layout: fixed; }
+  .fiche table.tour th.mag { width: 45%; }
+  .fiche td.case, .fiche th.case { width: 80px; }
+  .fiche table.eq { margin-bottom: 14px; }
+  /* Tableau des chauffeurs : paysage, tenu sur une seule feuille (voir tenirSurUneFeuille).
+     Le format de page (A3 ou A4) est posé au moment d'imprimer, d'après le choix « Format ». */
+  .fiche.paysage h1 { font-size: 26px; }
+  .fiche.paysage .s { font-size: 14px; }
+  .fiche table.chauf2 { font-size: 17px; }
+  .fiche table.chauf2 th { text-align: center; vertical-align: middle; font-size: 15px; padding: 8px; }
+  .fiche table.chauf2 td { vertical-align: middle; padding: 7px 10px; line-height: 1.35; }
+  .fiche table.chauf2 td.t { text-align: center; font-weight: bold; font-size: 30px; width: 80px; }
+  .fiche table.chauf2 td.equipe { font-weight: bold; }
+  .fiche table.chauf2 td.equipe i, .fiche table.chauf2 td.equipe .manque { font-weight: normal; }
+  /* Largeurs : « Magasins » resserrée ; les colonnes des jours se partagent la place restante */
+  .fiche table.chauf2 { table-layout: fixed; }
+  .fiche table.chauf2 th.t { width: 80px; }
+  .fiche table.chauf2 th.c-mag { width: 17%; }
+  .fiche table.chauf2 th.c-loc { width: 11%; }
+  .fiche table.chauf2 th.c-veh { width: 14%; }
+  /* Caractères agrandis pour les chauffeurs et le véhicule */
+  .fiche table.chauf2 td.equipe { font-size: 32px; }
+  .fiche table.chauf2 td.vehicule { font-size: 32px; font-weight: bold; }
+  .fiche table.chauf2 tr { page-break-inside: avoid; break-inside: avoid; }
+  .fiche table.chauf2 tbody.bloc-tournee tr:first-child td { border-top: 3px solid #333; }
+  .fiche table.chauf2 tbody.teinte-a td { background: #DCEBFA; }   /* bleu pâle */
+  .fiche table.chauf2 tbody.teinte-b td { background: #DDF1DA; }   /* vert pâle */
+  .fiche table.chauf2 td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .fiche table.chauf th.t { width: 70px; }
+  .fiche table.chauf td.t { font-weight: bold; white-space: nowrap; }
+  .fiche table.chauf td.mags { font-size: 11px; color: #444; }
+  .fiche table.chauf th.tel { width: 140px; }
+  .fiche table.eq td.j { width: 160px; font-weight: bold; }
+  #impression.mesure { display: block; position: absolute; left: -10000px; top: 0; visibility: hidden; }
+  .fit-inner { display: flow-root; }
   @media print {
-    body { background: white; }
+    body { background: white; min-height: 0 !important; }
+    html, body { height: auto !important; }
     #app, .toast, .overlay { display: none !important; }
     #impression { display: block; }
-    .fiche:last-child { page-break-after: auto; }
-    .fiche { page-break-after: always; font-family: Arial, sans-serif; }
-    .fiche h1 { font-size: 20px; margin: 0 0 4px; }
-    .fiche .s { font-size: 12px; color: #555; margin-bottom: 12px; }
-    .fiche table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .fiche th, .fiche td { border: 1px solid #999; padding: 6px; vertical-align: top; text-align: left; }
-    .fiche th { background: #eee; }
-    .fiche td.h { white-space: nowrap; font-weight: bold; width: 90px; }
-    .fiche .manque { color: #B4462F; font-style: italic; }
-    .fiche h2 { font-size: 16px; margin: 18px 0 6px; }
-    .fiche table.tour { table-layout: fixed; }
-    .fiche table.tour th.mag { width: 45%; }
-    .fiche td.case, .fiche th.case { width: 80px; }
-    .fiche table.eq { margin-bottom: 14px; }
-    /* Tableau des chauffeurs : paysage, au format choisi à l'impression (A3 ou A4) */
-    @page paysage { size: landscape; margin: 10mm; }
-    .fiche.paysage { page: paysage; }
-    .fiche.paysage h1 { font-size: 26px; }
-    .fiche.paysage .s { font-size: 14px; }
-    .fiche table.chauf2 { font-size: 17px; }
-    .fiche table.chauf2 th { text-align: center; vertical-align: middle; font-size: 15px; padding: 8px; }
-    .fiche table.chauf2 td { vertical-align: middle; padding: 7px 10px; line-height: 1.35; }
-    .fiche table.chauf2 td.t { text-align: center; font-weight: bold; font-size: 22px; width: 70px; }
-    .fiche table.chauf2 td.equipe { font-weight: bold; }
-    .fiche table.chauf2 td.equipe i, .fiche table.chauf2 td.equipe .manque { font-weight: normal; }
-    .fiche table.chauf2 tr { page-break-inside: avoid; break-inside: avoid; }
-    .fiche table.chauf2 tbody.bloc-tournee tr:first-child td { border-top: 3px solid #333; }
-    .fiche table.chauf th.t { width: 70px; }
-    .fiche table.chauf td.t { font-weight: bold; white-space: nowrap; }
-    .fiche table.chauf td.mags { font-size: 11px; color: #444; }
-    .fiche table.chauf th.tel { width: 140px; }
-    .fiche table.eq td.j { width: 160px; font-weight: bold; }
   }
   @media (max-width: 640px) {
     header.top, nav.tabs, main { padding-left: 14px; padding-right: 14px; }
@@ -276,6 +293,7 @@
     <section id="vue-tournees" class="hidden">
       <div class="toolbar">
         <span class="espace"></span>
+        <label title="A3 pour l'imprimante de la BA ; A4 pour un contrôle chez soi (texte plus petit)" style="display:flex; align-items:center; gap:6px; font-size:13px; color:var(--ink-soft);">Format <select id="formatChauffeurs" style="padding:6px 8px; border:2px solid var(--line); border-radius:8px; font-size:13px; font-family:inherit; background:var(--panel);"><option value="A3">A3</option><option value="A4">A4</option></select></label>
         <button class="btn btn-secondary btn-small" id="btnImprimerChauffeurs" title="Vue d'ensemble : équipages de toutes les tournées et liste des chauffeurs">🖨 Imprimer le tableau des chauffeurs</button>
       </div>
       <div id="resumeTournees"></div>
@@ -959,7 +977,50 @@
     await chargerTournees();
   }
 
-  // ---------- Impression : tableau des chauffeurs (une seule feuille, paysage) ----------
+  // ---------- Impression sur une seule feuille ----------
+  // Zone utile d'une page paysage avec 10 mm de marge : A3 (420 × 297) → 400 × 277 mm ; A4 (297 × 210) → 277 × 190 mm.
+  const FORMATS_PAPIER = { A3: { largeur: 400, hauteur: 277 }, A4: { largeur: 277, hauteur: 190 } };
+
+  // Mesure la hauteur réelle du contenu à la largeur de la page choisie (A3 ou A4) et, s'il est trop haut, le
+  // réduit (échelle) pour qu'il tienne sur UNE seule feuille. Sans effet s'il tient déjà.
+  function tenirSurUneFeuille(zone, largeurMm, hauteurMm) {
+    const fiche = zone.querySelector('.fiche.paysage');
+    if (!fiche) return;
+    fiche.innerHTML = '<div class="fit-box"><div class="fit-inner">' + fiche.innerHTML + '</div></div>';
+    const box = fiche.querySelector('.fit-box');
+    const contenu = fiche.querySelector('.fit-inner');
+
+    // 1) mesure : la zone est affichée hors écran, à la largeur utile de la page
+    zone.style.width = largeurMm + 'mm';
+    zone.classList.add('mesure');
+    const hauteurPx = contenu.getBoundingClientRect().height;
+    zone.classList.remove('mesure');
+    zone.style.width = '';
+
+    // 2) échelle : 5 % de marge de sécurité, jamais en dessous de 30 %
+    const dispoPx = hauteurMm * 96 / 25.4 * 0.95;
+    const k = Math.max(0.3, Math.min(1, dispoPx / hauteurPx));
+    if (k >= 1) return;
+
+    // « zoom » réduit réellement la taille du bloc dans la mise en page : pas de page vide en trop
+    if (typeof CSS !== 'undefined' && CSS.supports && CSS.supports('zoom', '0.5')) {
+      contenu.style.zoom = k;
+      return;
+    }
+    // Repli (navigateur sans « zoom ») : réduction visuelle ; la boîte, de hauteur réduite, masque
+    // l'excédent invisible du bloc non réduit (sinon il créerait des pages blanches).
+    box.style.position = 'relative';
+    box.style.height = Math.ceil(hauteurPx * k * 1.03) + 'px';
+    box.style.overflow = 'hidden';
+    contenu.style.position = 'absolute';   // sorti du flux : le bloc non réduit ne crée pas de pages en plus
+    contenu.style.top = '0';
+    contenu.style.left = '0';
+    contenu.style.transformOrigin = 'top left';
+    contenu.style.transform = `scale(${k})`;
+    contenu.style.width = (100 / k) + '%';
+  }
+
+  // ---------- Impression : tableau des chauffeurs (une seule feuille, A3 ou A4 paysage) ----------
   // Tournée / Magasins / Localité / Chauffeurs + accompagnateur par jour / Véhicule
   // Noms seulement (pas de téléphones) : les chauffeurs se connaissent.
   $('btnImprimerChauffeurs').onclick = async () => {
@@ -981,25 +1042,33 @@
     };
     let html = `<div class="fiche paysage"><h1>Collecte — Tableau des chauffeurs</h1>
       <div class="s">Banque Alimentaire des Côtes d'Armor · collecte des ${jours.map(jourLong).join(' et ')} · imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>
-      <table class="chauf2"><thead><tr><th class="t">Tournée</th><th>Magasins</th><th>Localité</th>
-        ${jours.map(j => `<th>Chauffeurs + accompagnateur<br>${jourLong(j)}</th>`).join('')}<th>Véhicule</th></tr></thead>`;
-    tournees.forEach(t => {
+      <table class="chauf2"><thead><tr><th class="t">Tournée</th><th class="c-mag">Magasins</th><th class="c-loc">Localité</th>
+        ${jours.map(j => `<th>Chauffeurs + accompagnateur<br>${jourLong(j)}</th>`).join('')}<th class="c-veh">Véhicule</th></tr></thead>`;
+    tournees.forEach((t, rang) => {
       const n = t.magasins.length;
-      html += '<tbody class="bloc-tournee">';
+      // teinte pâle alternée (bleu, vert, bleu…) pour distinguer les tournées d'un coup d'œil
+      html += `<tbody class="bloc-tournee ${rang % 2 === 0 ? 'teinte-a' : 'teinte-b'}">`;
       t.magasins.forEach((m, i) => {
         html += '<tr>';
         if (i === 0) html += `<td class="t" rowspan="${n}">T${t.n}</td>`;
         html += `<td>${esc(m.nom)}</td><td>${esc(m.commune || '')}</td>`;
         if (i === 0) {
           html += jours.map(j => `<td class="equipe" rowspan="${n}">${equipe(equipageDe(t.n, j))}</td>`).join('');
-          html += `<td rowspan="${n}">${vehicule(t.n)}</td>`;
+          html += `<td class="vehicule" rowspan="${n}">${vehicule(t.n)}</td>`;
         }
         html += '</tr>';
       });
       html += '</tbody>';
     });
     $('impression').innerHTML = html + '</table></div>';
+    // Format choisi (A3 par défaut) : sert à la fois au calcul de la réduction et à la taille de page demandée
+    const format = $('formatChauffeurs') && $('formatChauffeurs').value === 'A4' ? 'A4' : 'A3';
+    tenirSurUneFeuille($('impression'), FORMATS_PAPIER[format].largeur, FORMATS_PAPIER[format].hauteur);
+    const stylePage = document.createElement('style');
+    stylePage.textContent = `@page { size: ${format} landscape; margin: 10mm; }`;
+    document.head.appendChild(stylePage);
     window.print();
+    stylePage.remove();   // la taille de page ne vaut que pour cette impression
   };
 
   $('btnImprimerTournees').onclick = async () => {

@@ -219,6 +219,39 @@
   #listeImprimable td.col-vide { min-width: 55px; }
   #listeImprimable h2 { font-family: Georgia, serif; color: #33513F; font-size: 15px; margin: 0 0 4px; }
   @page { margin: 10mm; }
+  /* Onglet Ramasses : grille façon tableur, cases éditables et colorables */
+  .ramasses-table { table-layout: fixed; }
+  .ramasses-table td { padding: 0; vertical-align: top; border-right: 1px solid var(--line); }
+  .ramasses-table td:last-child { border-right: none; }
+  .ramasses-table td.selectionnee { box-shadow: inset 0 0 0 2px var(--green); }
+  .ramasses-table textarea {
+    display: block; width: 100%; box-sizing: border-box; min-height: 44px;
+    padding: 10px 12px; border: none; background: transparent; resize: none; overflow: hidden;
+    font: inherit; font-size: 14px; color: var(--ink); line-height: 1.35;
+  }
+  .ramasses-table textarea:focus { outline: 2px solid var(--green); outline-offset: -2px; }
+  .barre-couleurs-ramasses { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 13px; color: var(--ink-soft); }
+  #paletteRamasses { display: inline-flex; gap: 8px; }
+  .pastille-ramasse { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #B9B39F; cursor: pointer; background: #fff; color: var(--ink-soft); font-size: 12px; line-height: 1; }
+  .pastille-ramasse:hover { box-shadow: 0 0 0 2px var(--green); }
+
+  /* Ramasses — feuille imprimable (A3 paysage) pour les chauffeurs */
+  #ramassesImprimable { display: none; }
+  #ramassesImprimable h2 { font-family: Georgia, serif; color: #33513F; font-size: 34px; margin: 0 0 14px; }
+  #ramassesImprimable table { width: 100%; table-layout: fixed; border-collapse: collapse; border: none; border-radius: 0; overflow: visible; font-size: 22px; }
+  #ramassesImprimable th, #ramassesImprimable td { font-weight: 700; border: 1.5px solid #555; padding: 11px 14px; text-align: left; vertical-align: top; white-space: pre-wrap; word-break: break-word; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #ramassesImprimable th { background: #E4EBE3; color: #23261F; font-size: 21px; text-transform: none; letter-spacing: 0; }
+  #ramassesImprimable .legende { font-weight: 600; margin-top: 18px; font-size: 20px; line-height: 1.5; white-space: pre-wrap; }
+  #ramassesImprimable .maj { font-size: 13px; color: #6B6A5E; margin-top: 12px; }
+  @media print {
+    body.impression-ramasses #adminView > header,
+    body.impression-ramasses #adminView > nav,
+    body.impression-ramasses .ramasses-ecran { display: none !important; }
+    body.impression-ramasses #ramassesImprimable { display: block !important; }
+    body.impression-ramasses #adminView main { max-width: none !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+    body.impression-ramasses #ramassesImprimable, body.impression-ramasses #ramassesImprimable * { visibility: visible; }
+    body.impression-ramasses #ramassesImprimable tr { page-break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
@@ -327,6 +360,7 @@
     <button class="tab-btn active" data-view="benevoles">Bénévoles</button>
     <button class="tab-btn" data-view="conges">Congés / Absences</button>
     <button class="tab-btn" data-view="planning">Planning</button>
+    <button class="tab-btn" data-view="ramasses">Ramasses</button>
     <button class="tab-btn" data-view="parametres">Paramètres</button>
     <button class="tab-btn" data-view="bilans">Bilans</button>
     <a href="aide.html" target="_blank" style="margin-left:14px; align-self:center; font-size:14px; color:var(--ink-soft); text-decoration:underline;">❓ Aide</a>
@@ -338,6 +372,7 @@
         <input type="text" id="searchB" placeholder="Rechercher un nom ou un numéro…">
         <button class="btn-primary" id="btnAdd">+ Ajouter un bénévole</button>
         <button class="btn-cancel" id="btnImprimerListe">🖨️ Imprimer une liste</button>
+        <button class="btn-cancel" id="btnExporterThunderbird" title="Exporte les bénévoles actifs ayant une adresse e-mail (CSV pour Thunderbird)">📧 Exporter pour Thunderbird</button>
       </div>
       <table>
         <thead><tr>
@@ -430,6 +465,35 @@
           <button class="btn-primary" id="btnEnvoyerMessageSeul" style="background:#3E6B8F;">✉️ Envoyer ce message</button>
         </div>
       </div>
+    </div>
+
+    <div class="view" id="view-ramasses">
+      <div class="ramasses-ecran">
+        <div style="font-weight:700; color:var(--ink); margin-bottom:6px;">Ramasses en magasin — semaine type</div>
+        <p style="color:var(--ink-soft); font-size:13px; margin: 0 0 14px;">
+          Clique dans une case pour la modifier : l'enregistrement est automatique.
+          <strong>Entrée</strong> = case du dessous · <strong>Maj + Entrée</strong> = retour à la ligne dans la case.
+        </p>
+        <div class="barre-couleurs-ramasses">
+          <span>Couleur de la case sélectionnée :</span>
+          <span id="paletteRamasses"></span>
+        </div>
+        <table class="ramasses-table">
+          <thead><tr>
+            <th>Lundi</th><th>Mardi</th><th>Mercredi</th><th>Jeudi</th><th>Vendredi</th>
+          </tr></thead>
+          <tbody id="tbodyRamasses"></tbody>
+        </table>
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+          <button class="btn-cancel" id="btnAjouterLigneRamasse">+ Ajouter une ligne</button>
+          <button class="btn-primary" id="btnImprimerRamasses">🖨️ Imprimer la grille (A3)</button>
+        </div>
+        <div style="margin-top:22px;">
+          <label for="ramassesLegende" style="display:block; font-weight:700; color:var(--ink); margin-bottom:6px;">Commentaires / légende <span style="font-weight:400; color:var(--ink-soft);">(imprimés sous le tableau)</span></label>
+          <textarea id="ramassesLegende" rows="3" placeholder="(F) = Frais / (F + L) = Frais + légumes / (L) = Légumes" style="width:100%; max-width:900px; padding:10px 12px; font-size:14px; border:2px solid var(--line); border-radius:8px; font-family:inherit; box-sizing:border-box;"></textarea>
+        </div>
+      </div>
+      <div id="ramassesImprimable"></div>
     </div>
 
     <div class="view" id="view-parametres">
@@ -1132,6 +1196,192 @@
   // ====================================================
   // MODE ADMIN — BÉNÉVOLES (CRUD)
   // ====================================================
+  // ====================================================
+  // RAMASSES — semaine type (lundi → vendredi), cases libres et colorables
+  // ====================================================
+  let ramasses = {};          // clé "ligne_jour" -> { texte, couleur }
+  let nbLignesRamasses = 8;   // nombre de lignes affichées (au moins 8)
+  let celluleRamasse = null;  // case sélectionnée { ligne, jour }
+
+  const COULEURS_RAMASSES = [
+    ['#FFF3B0', 'Jaune'], ['#FFD9A8', 'Orange'], ['#FFC9C9', 'Rouge'],
+    ['#CDEBC5', 'Vert'], ['#CFE3FA', 'Bleu'], ['#E3D7F2', 'Violet'],
+  ];
+  const couleurValide = c => (typeof c === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c)) ? c : '';
+
+  async function chargerRamasses() {
+    const [rCases, rLegende] = await Promise.all([
+      sb.from('ramasses').select('ligne, jour, texte, couleur'),
+      sb.from('ramasses_legende').select('texte').eq('id', 1).maybeSingle(),
+    ]);
+    if (rCases.error) { console.error(rCases.error); showToast('Erreur de chargement des ramasses.'); return; }
+    ramasses = {};
+    let maxLigne = -1;
+    (rCases.data || []).forEach(r => {
+      ramasses[r.ligne + '_' + r.jour] = { texte: r.texte || '', couleur: r.couleur || null };
+      if (r.ligne > maxLigne) maxLigne = r.ligne;
+    });
+    // toujours au moins une ligne vide disponible sous la dernière ligne remplie
+    nbLignesRamasses = Math.max(nbLignesRamasses, 8, maxLigne + 2);
+    if (rLegende.error) console.error(rLegende.error);
+    document.getElementById('ramassesLegende').value = (rLegende.data && rLegende.data.texte) || '';
+    renderRamasses();
+  }
+
+  // Toutes les cases d'une même ligne gardent la même hauteur (comme dans un tableur)
+  function ajusterLigneRamasse(tr) {
+    const areas = tr.querySelectorAll('textarea');
+    areas.forEach(t => { t.style.height = 'auto'; });
+    const h = Math.max(44, ...Array.from(areas).map(t => t.scrollHeight));
+    areas.forEach(t => { t.style.height = h + 'px'; });
+  }
+
+  function marquerSelectionRamasse() {
+    document.querySelectorAll('#tbodyRamasses td').forEach(td => td.classList.remove('selectionnee'));
+    if (!celluleRamasse) return;
+    const ta = document.querySelector(`#tbodyRamasses textarea[data-ligne="${celluleRamasse.ligne}"][data-jour="${celluleRamasse.jour}"]`);
+    if (ta) ta.closest('td').classList.add('selectionnee');
+  }
+
+  function renderRamasses() {
+    const tbody = document.getElementById('tbodyRamasses');
+    tbody.innerHTML = '';
+    for (let l = 0; l < nbLignesRamasses; l++) {
+      const tr = document.createElement('tr');
+      for (let j = 1; j <= 5; j++) {
+        const c = ramasses[l + '_' + j] || { texte: '', couleur: null };
+        const td = document.createElement('td');
+        td.style.backgroundColor = couleurValide(c.couleur);
+        const ta = document.createElement('textarea');
+        ta.rows = 1;
+        ta.value = c.texte;
+        ta.dataset.ligne = l;
+        ta.dataset.jour = j;
+        ta.addEventListener('focus', () => { celluleRamasse = { ligne: l, jour: j }; marquerSelectionRamasse(); });
+        ta.addEventListener('input', () => ajusterLigneRamasse(tr));
+        ta.addEventListener('change', () => enregistrerCaseRamasse(l, j, { texte: ta.value }));
+        ta.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const suivante = document.querySelector(`#tbodyRamasses textarea[data-ligne="${l + 1}"][data-jour="${j}"]`);
+            if (suivante) suivante.focus(); else ta.blur();
+          }
+        });
+        td.appendChild(ta);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+      ajusterLigneRamasse(tr);
+    }
+    marquerSelectionRamasse();
+  }
+
+  // Enregistre une case (texte et/ou couleur). Une case sans texte ET sans couleur est supprimée.
+  async function enregistrerCaseRamasse(ligne, jour, changes) {
+    const cle = ligne + '_' + jour;
+    const ancien = ramasses[cle] ? { ...ramasses[cle] } : null;
+    const courant = { texte: '', couleur: null, ...(ramasses[cle] || {}) };
+    if (changes.texte !== undefined) courant.texte = changes.texte.trim();
+    if (changes.couleur !== undefined) courant.couleur = changes.couleur;
+    const vide = courant.texte === '' && !courant.couleur;
+    // mise à jour locale immédiate (évite de perdre l'affichage si on re-dessine la grille)
+    if (vide) delete ramasses[cle]; else ramasses[cle] = courant;
+
+    let error;
+    if (vide) {
+      ({ error } = await sb.from('ramasses').delete().eq('ligne', ligne).eq('jour', jour));
+    } else {
+      ({ error } = await sb.from('ramasses').upsert(
+        { ligne, jour, texte: courant.texte, couleur: courant.couleur }, { onConflict: 'ligne,jour' }));
+    }
+    if (error) {
+      if (ancien) ramasses[cle] = ancien; else delete ramasses[cle];
+      renderRamasses();
+      alert('Erreur lors de l\'enregistrement : ' + error.message);
+      return;
+    }
+    showToast('Enregistré.');
+  }
+
+  function appliquerCouleurRamasse(couleur) {
+    if (!celluleRamasse) { showToast('Clique d\'abord dans une case.'); return; }
+    const { ligne, jour } = celluleRamasse;
+    const ta = document.querySelector(`#tbodyRamasses textarea[data-ligne="${ligne}"][data-jour="${jour}"]`);
+    if (ta) ta.closest('td').style.backgroundColor = couleur || '';
+    // on transmet aussi le texte en cours de saisie, pour ne jamais enregistrer une ancienne version
+    enregistrerCaseRamasse(ligne, jour, { couleur, texte: ta ? ta.value : undefined });
+  }
+
+  // Pastilles de couleur (la souris ne retire pas le focus de la case en cours)
+  (function initPaletteRamasses() {
+    const zone = document.getElementById('paletteRamasses');
+    const ajouter = (couleur, titre) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pastille-ramasse';
+      b.title = titre;
+      if (couleur) b.style.backgroundColor = couleur; else b.textContent = '✕';
+      b.addEventListener('mousedown', e => e.preventDefault());
+      b.addEventListener('click', () => appliquerCouleurRamasse(couleur));
+      zone.appendChild(b);
+    };
+    COULEURS_RAMASSES.forEach(([c, nom]) => ajouter(c, nom));
+    ajouter(null, 'Aucune couleur');
+  })();
+
+  document.getElementById('ramassesLegende').addEventListener('change', async (e) => {
+    const texte = e.target.value.trim();
+    const { error } = await sb.from('ramasses_legende').upsert({ id: 1, texte });
+    if (error) { alert('Erreur lors de l\'enregistrement : ' + error.message); return; }
+    showToast('Enregistré.');
+  });
+
+  document.getElementById('btnAjouterLigneRamasse').onclick = () => {
+    nbLignesRamasses++;
+    renderRamasses();
+    const premiere = document.querySelector(`#tbodyRamasses textarea[data-ligne="${nbLignesRamasses - 1}"][data-jour="1"]`);
+    if (premiere) premiere.focus();
+  };
+
+  document.getElementById('btnImprimerRamasses').onclick = () => {
+    const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
+    const vide = { texte: '', couleur: null };
+    const lignes = [];
+    for (let l = 0; l < nbLignesRamasses; l++) {
+      const cases = [1, 2, 3, 4, 5].map(j => ramasses[l + '_' + j] || vide);
+      if (cases.some(c => c.texte || c.couleur)) lignes.push(cases);   // lignes entièrement vides ignorées
+    }
+    if (!lignes.length) { alert('La grille est vide : rien à imprimer.'); return; }
+
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const legende = document.getElementById('ramassesLegende').value.trim();
+
+    let html = '<h2>Ramasses en magasin — semaine type</h2>';
+    html += '<table><thead><tr>' + jours.map(j => `<th>${j}</th>`).join('') + '</tr></thead><tbody>';
+    lignes.forEach(cases => {
+      html += '<tr>' + cases.map(c => {
+        const col = couleurValide(c.couleur);
+        return `<td${col ? ` style="background-color:${col}"` : ''}>${esc(c.texte)}</td>`;
+      }).join('') + '</tr>';
+    });
+    html += '</tbody></table>';
+    if (legende) html += `<div class="legende">${esc(legende)}</div>`;
+    html += `<div class="maj">Imprimé le ${new Date().toLocaleDateString('fr-FR')}</div>`;
+
+    const zone = document.getElementById('ramassesImprimable');
+    zone.innerHTML = html;
+
+    // Format A3 paysage uniquement pour cette impression (retiré juste après)
+    const stylePage = document.createElement('style');
+    stylePage.textContent = '@page { size: A3 landscape; margin: 12mm; }';
+    document.head.appendChild(stylePage);
+    document.body.classList.add('impression-ramasses');
+    window.print();
+    document.body.classList.remove('impression-ramasses');
+    stylePage.remove();
+    zone.innerHTML = '';
+  };
+
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = async () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1150,6 +1400,10 @@
         if (typeof planningLundiActuel !== 'undefined' && planningLundiActuel) {
           document.getElementById('btnGenererPlanning').click();
         }
+      }
+      // En arrivant sur Ramasses, on (re)charge la grille depuis la base.
+      if (btn.dataset.view === 'ramasses') {
+        await chargerRamasses();
       }
     };
   });
@@ -1243,6 +1497,33 @@
   }
   document.getElementById('searchB').addEventListener('input', renderBenevoles);
   document.getElementById('btnAdd').onclick = () => openModal(null);
+
+  document.getElementById('btnExporterThunderbird').onclick = () => {
+    const actifs = benevoles.filter(b => b.statut === 'actif').slice()
+      .sort((a, b) => a.nom.localeCompare(b.nom) || a.prenom.localeCompare(b.prenom));
+    const avecMail = actifs.filter(b => /\S+@\S+\.\S+/.test((b.email || '').trim()));
+    const sansMail = actifs.length - avecMail.length;
+    if (!avecMail.length) { alert('Aucun bénévole actif avec une adresse e-mail.'); return; }
+
+    // CSV au format attendu par Thunderbird (en-têtes reconnus automatiquement à l'import)
+    const q = s => '"' + String(s || '').replace(/"/g, '""') + '"';
+    const lignes = [['First Name', 'Last Name', 'Display Name', 'Primary Email'].map(q).join(',')];
+    avecMail.forEach(b => {
+      const prenom = (b.prenom || '').trim();
+      const nom = (b.nom || '').trim();
+      lignes.push([prenom, nom, `${prenom} ${nom}`.trim(), b.email.trim()].map(q).join(','));
+    });
+
+    const url = URL.createObjectURL(new Blob([lignes.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `benevoles_actifs_${todayISO()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`${avecMail.length} contact(s) exporté(s)` + (sansMail ? ` — ${sansMail} actif(s) sans e-mail ignoré(s)` : '') + '.');
+  };
 
   document.getElementById('btnImprimerListe').onclick = () => {
     const titreColonne = prompt('Titre de la seconde colonne (ex. "Présent", "Cotisation réglée"…) :', 'Note');
