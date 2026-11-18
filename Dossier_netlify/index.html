@@ -102,6 +102,14 @@
   /* Lien vers l'espace collecte : à l'opposé des onglets, pour bien séparer les deux applications */
   nav.tabs .lien-collecte { margin-left: auto; align-self: center; margin-bottom: 6px; padding: 7px 16px; border: 2px solid var(--amber); border-radius: 999px; background: var(--amber-soft); color: #8A5C16; font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
   nav.tabs .lien-collecte:hover { background: var(--amber); color: white; }
+  /* Lien vers le publipostage (hébergé sur le PC de la BA, via ngrok) : juste à côté de Collecte */
+  nav.tabs .lien-publi { margin-left: 8px; align-self: center; margin-bottom: 6px; padding: 7px 16px; border: 2px solid #3E6B8F; border-radius: 999px; background: #E3ECF3; color: #3E6B8F; font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer; white-space: nowrap; }
+  nav.tabs .lien-publi:hover { background: #3E6B8F; color: white; }
+  #publiOverlay .modal { max-width: 480px; text-align: left; }
+  #publiOverlay p { font-size: 15px; line-height: 1.5; margin: 10px 0; }
+  #publiOverlay .encadre-ngrok { background: var(--amber-soft); border-radius: 10px; padding: 12px 14px; margin: 14px 0; }
+  #publiOverlay .petit { font-size: 13px; color: var(--ink-soft); }
+  #publiOverlay .buttons { margin-top: 18px; }
 
   #adminView main { padding: 26px 32px 60px; max-width: 1050px; margin: 0 auto; }
   .view { display: none; } .view.active { display: block; }
@@ -365,6 +373,8 @@
     <button class="tab-btn" data-view="bilans">Bilans</button>
     <a href="aide.html" target="_blank" style="margin-left:14px; align-self:center; font-size:14px; color:var(--ink-soft); text-decoration:underline;">❓ Aide</a>
     <a href="collecte.html" target="_blank" class="lien-collecte" title="Ouvre l'espace collecte dans un nouvel onglet (application séparée)">🛒 Collecte ↗</a>
+    <!-- Pas de classe "tab-btn" : ce n'est pas un onglet, il ouvre seulement la fenêtre d'avertissement -->
+    <button type="button" class="lien-publi" id="btnPublipostage" title="Ouvre le publipostage dans un nouvel onglet (application séparée)">📨 Publipostage ↗</button>
   </nav>
   <main>
     <div class="view active" id="view-benevoles">
@@ -680,6 +690,24 @@
     <div class="btn-row">
       <button class="btn-cancel-login" id="btnCancelLogin">Annuler</button>
       <button class="btn-confirm-login" id="btnConfirmLogin">Se connecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Avertissement avant d'ouvrir le publipostage (page d'avertissement ngrok) -->
+<div class="overlay" id="publiOverlay">
+  <div class="modal">
+    <div class="eyebrow">📨 Publipostage</div>
+    <p>Le publipostage est hébergé sur le PC de la Banque Alimentaire. Il va s'ouvrir dans un <b>nouvel onglet</b>.</p>
+    <div class="encadre-ngrok">
+      <p style="margin-top:0;"><b>À la première ouverture</b>, une page en anglais du service <i>ngrok</i> peut s'afficher
+        (« You are about to visit… »).</p>
+      <p style="margin-bottom:0;"><b>Ce n'est pas une arnaque</b> : cliquez simplement sur le bouton bleu <b>« Visit Site »</b>.</p>
+    </div>
+    <p class="petit">Si la page ne s'ouvre pas, le PC de la BA est peut-être éteint : prévenez le responsable informatique.</p>
+    <div class="buttons">
+      <button class="btn-cancel" id="btnPubliAnnuler">Annuler</button>
+      <button class="btn-confirm" id="btnPubliContinuer">Continuer →</button>
     </div>
   </div>
 </div>
@@ -1381,6 +1409,19 @@
     stylePage.remove();
     zone.innerHTML = '';
   };
+
+  // ---- Publipostage : application séparée, sur le PC de la BA, exposée par ngrok
+  // (offre gratuite → page d'avertissement ngrok à la première visite, d'où la fenêtre explicative)
+  const URL_PUBLIPOSTAGE = 'https://cabdriver-sworn-jeeringly.ngrok-free.dev/login'; // ← adresse ngrok du publipostage
+  const publiOverlay = document.getElementById('publiOverlay');
+  const fermerPubli = () => publiOverlay.classList.remove('open');
+  document.getElementById('btnPublipostage').onclick = () => publiOverlay.classList.add('open');
+  document.getElementById('btnPubliAnnuler').onclick = fermerPubli;
+  document.getElementById('btnPubliContinuer').onclick = () => {
+    window.open(URL_PUBLIPOSTAGE, '_blank', 'noopener');
+    fermerPubli();
+  };
+  publiOverlay.addEventListener('click', e => { if (e.target === publiOverlay) fermerPubli(); });
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = async () => {
