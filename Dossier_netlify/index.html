@@ -551,6 +551,7 @@
 
       <div class="toolbar" style="margin-top: 24px;">
         <input type="text" id="searchBilan" placeholder="Rechercher un bénévole…">
+        <button class="btn-cancel" id="btnExporterCerfa" title="CSV pour le publipostage des reçus fiscaux (abandon de frais kilométriques) — calculer le bilan d'abord">📄 Exporter pour CERFA</button>
       </div>
       <table>
         <thead><tr><th>N°</th><th>Nom</th><th>Jours présence</th><th>Heures</th><th>Distance (km)</th><th>Indemnité km</th></tr></thead>
@@ -1412,7 +1413,7 @@
 
   // ---- Publipostage : application séparée, sur le PC de la BA, exposée par ngrok
   // (offre gratuite → page d'avertissement ngrok à la première visite, d'où la fenêtre explicative)
-  const URL_PUBLIPOSTAGE = 'https://cabdriver-sworn-jeeringly.ngrok-free.dev/login'; // ← adresse ngrok du publipostage
+  const URL_PUBLIPOSTAGE = 'https://VOTRE-DOMAINE.ngrok-free.app'; // ← adresse ngrok du publipostage
   const publiOverlay = document.getElementById('publiOverlay');
   const fermerPubli = () => publiOverlay.classList.remove('open');
   document.getElementById('btnPublipostage').onclick = () => publiOverlay.classList.add('open');
@@ -2691,6 +2692,80 @@
       });
   }
   document.getElementById('searchBilan').addEventListener('input', renderBilanBenevoles);
+
+  // ---- Export CSV pour le publipostage des reçus fiscaux (CERFA, abandon de frais km)
+  // Croise le bilan calculé (montant d'indemnités km par bénévole) avec les adresses
+  // des fiches. Bénévoles uniquement (pas les salariés), montant > 0.
+  document.getElementById('btnExporterCerfa').onclick = async () => {
+    const annee = parseInt(document.getElementById('bilanAnnee').value, 10);
+    if (!bilanBenevolesData.length) { alert('Clique d\'abord sur « Calculer » pour l\'année voulue.'); return; }
+
+    const parNumero = new Map(benevoles.map(b => [b.numero, b]));
+    const candidats = bilanBenevolesData
+      .map(r => ({ r, b: parNumero.get(r.numero) }))
+      .filter(({ r, b }) => b && b.categorie !== 'salarie' && Math.round((r.montant_indemnite_km || 0) * 100) > 0)
+      .sort((x, y) => x.b.nom.localeCompare(y.b.nom) || x.b.prenom.localeCompare(y.b.prenom));
+
+    const adresseOK = b => (b.rue || '').trim() && (b.code_postal || '').trim() && (b.ville || '').trim();
+    const complets = candidats.filter(({ b }) => adresseOK(b));
+    const incomplets = candidats.filter(({ b }) => !adresseOK(b));
+    if (!complets.length) { alert('Aucun bénévole avec un montant > 0 et une adresse complète pour ' + annee + '.'); return; }
+
+    // Numérotation : compteur stocké dans Supabase (table recus_compteur)
+    const [rCompteur, rLots] = await Promise.all([
+      sb.from('recus_compteur').select('prefixe, dernier_numero').eq('id', 1).maybeSingle(),
+      sb.from('recus_lots').select('premier, dernier, nb, cree_le').eq('annee_dons', annee).order('cree_le'),
+    ]);
+    if (rCompteur.error || !rCompteur.data) {
+      alert('Compteur de reçus introuvable : le script recus_fiscaux.sql a-t-il été exécuté dans Supabase ?');
+      return;
+    }
+    const { prefixe: prefixeActuel, dernier_numero } = rCompteur.data;
+    const n = complets.length;
+    let question = `${n} reçu(s) à générer pour les dons ${annee} :\n` +
+      `n° ${prefixeActuel}${dernier_numero + 1} → ${prefixeActuel}${dernier_numero + n}\n\n`;
+    if (rLots.data && rLots.data.length) {
+      question += `⚠️ ATTENTION : des reçus ont DÉJÀ été émis pour ${annee} :\n` +
+        rLots.data.map(l => `• ${l.premier} → ${l.dernier} (${l.nb} reçus, le ${new Date(l.cree_le).toLocaleDateString('fr-FR')})`).join('\n') +
+        `\n\nUn nouvel export créera des reçus EN DOUBLE pour les mêmes personnes.\n\n`;
+    }
+    question += 'Confirmer ? Les numéros seront réservés définitivement.';
+    if (!confirm(question)) return;
+
+    const { data: resa, error: errResa } = await sb.rpc('reserver_numeros_recus', { p_annee: annee, p_nb: n });
+    if (errResa || !resa || !resa.length) { alert('Erreur lors de la réservation des numéros : ' + (errResa ? errResa.message : 'réponse vide')); return; }
+    const { prefixe, premier: depart } = resa[0];
+    const numeroRecu = i => prefixe + (Number(depart) + i);
+
+    const dateEmission = new Date().toLocaleDateString('fr-FR');
+    const q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+    const entetes = ['numero_recu', 'nom', 'prenom', 'rue', 'code_postal', 'ville', 'email',
+                     'montant', 'distance_km', 'date_debut', 'date_fin', 'date_emission', 'numero_benevole'];
+    const lignes = [entetes.map(q).join(';')];
+    complets.forEach(({ r, b }, i) => {
+      lignes.push([
+        numeroRecu(i), (b.nom || '').trim().toUpperCase(), (b.prenom || '').trim(), b.rue.trim(), b.code_postal.trim(), b.ville.trim(),
+        (b.email || '').trim(),
+        Number(r.montant_indemnite_km).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        r.distance_totale_km, `01/01/${annee}`, `31/12/${annee}`, dateEmission, b.numero
+      ].map(q).join(';'));
+    });
+
+    const url = URL.createObjectURL(new Blob([lignes.join('\r\n') + '\r\n'], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cerfa_${annee}_${todayISO()}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    const dernier = numeroRecu(complets.length - 1);
+    let msg = `${complets.length} reçu(s) exporté(s) : n° ${numeroRecu(0)} → ${dernier}.\n\nLe compteur est à jour dans Supabase.`;
+    if (incomplets.length) {
+      msg += `\n\n⚠️ ${incomplets.length} bénévole(s) NON exporté(s), adresse incomplète sur la fiche :\n` +
+        incomplets.map(({ b }) => `• ${b.prenom} ${b.nom} (n° ${b.numero})`).join('\n');
+    }
+    alert(msg);
+  };
 
   // ====================================================
   // TOAST + DÉMARRAGE
